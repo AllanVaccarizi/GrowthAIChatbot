@@ -319,7 +319,7 @@
     // Default configuration
     const defaultConfig = {
         webhook: {
-            url: 'https://n8n.srv749948.hstgr.cloud/webhook/88707b4f-c9ba-4bd5-b1ae-4eecb628fa9d/chat',
+            url: 'https://n8n.srv749948.hstgr.cloud/webhook/b7ade37a-0d38-4e8a-b2f7-d65e32c32670/chat',
             route: 'general'
         },
         branding: {
