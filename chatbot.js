@@ -402,11 +402,83 @@
         }
 
         .n8n-chat-widget .chat-message.bot {
-            animation: messageAppear 0.4s ease-out;
+            animation: messageAppear 0.3s ease-out;
         }
 
         .n8n-chat-widget .bot-avatar {
-            animation: messageAppear 0.3s ease-out;
+            animation: messageAppear 0.2s ease-out;
+        }
+
+        /* Effet curseur clignotant pour l'effet machine à écrire */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .n8n-chat-widget .chat-message.bot.typing::after {
+            content: '|';
+            animation: blink 1s infinite;
+            color: var(--chat--color-primary);
+            font-weight: bold;
+        }
+
+        /* Popup "Une question ?" */
+        .n8n-chat-widget .chat-popup {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: #DC2626;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Archivo', sans-serif;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+            opacity: 0;
+            transform: scale(0) translateX(20px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+            z-index: 998;
+            cursor: pointer;
+        }
+
+        .n8n-chat-widget .chat-popup.position-left {
+            right: auto;
+            left: 20px;
+            transform: scale(0) translateX(-20px);
+        }
+
+        .n8n-chat-widget .chat-popup.show {
+            opacity: 1;
+            transform: scale(1) translateX(0);
+            pointer-events: auto;
+        }
+
+        .n8n-chat-widget .chat-popup::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 30px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #DC2626;
+        }
+
+        .n8n-chat-widget .chat-popup.position-left::after {
+            right: auto;
+            left: 30px;
+        }
+
+        @keyframes popupBounce {
+            0%, 100% { transform: scale(1) translateX(0); }
+            50% { transform: scale(1.05) translateX(0); }
+        }
+
+        .n8n-chat-widget .chat-popup.show {
+            animation: popupBounce 2s ease-in-out infinite;
         }
     `;
 
@@ -503,8 +575,14 @@
             <path d="M12 2C6.477 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2.5 21.5l4.5-.838A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.476 0-2.886-.313-4.156-.878l-3.156.586.586-3.156A7.962 7.962 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/>
         </svg>`;
     
+    // Créer le popup "Une question ?"
+    const chatPopup = document.createElement('div');
+    chatPopup.className = `chat-popup${config.style.position === 'left' ? ' position-left' : ''}`;
+    chatPopup.textContent = 'Une question ?';
+    
     widgetContainer.appendChild(chatContainer);
     widgetContainer.appendChild(toggleButton);
+    widgetContainer.appendChild(chatPopup);
     document.body.appendChild(widgetContainer);
 
     const chatInterface = chatContainer.querySelector('.chat-interface');
@@ -558,6 +636,42 @@
         }
     }
 
+    // Fonction pour créer l'effet machine à écrire
+    function typeWriter(element, text, speed = 30) {
+        let index = 0;
+        const parentDiv = element.parentElement;
+        parentDiv.classList.add('typing');
+        element.innerHTML = ''; // Vider le contenu initial
+        
+        function type() {
+            if (index < text.length) {
+                if (text.substring(index, index + 4) === '<br>') {
+                    element.innerHTML += '<br>';
+                    index += 4;
+                } else if (text.charAt(index) === '<') {
+                    // Gérer les balises HTML
+                    let tagEnd = text.indexOf('>', index);
+                    if (tagEnd !== -1) {
+                        element.innerHTML += text.substring(index, tagEnd + 1);
+                        index = tagEnd + 1;
+                    } else {
+                        element.innerHTML += text.charAt(index);
+                        index++;
+                    }
+                } else {
+                    element.innerHTML += text.charAt(index);
+                    index++;
+                }
+                setTimeout(type, speed);
+            } else {
+                // Retirer la classe typing et le curseur à la fin
+                parentDiv.classList.remove('typing');
+            }
+        }
+        
+        type();
+    }
+
     async function sendMessage(message) {
         await initializeSession();
 
@@ -600,32 +714,30 @@
             messagesContainer.removeChild(typingIndicator);
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'chat-message bot';
-            botMessageDiv.style.opacity = '0'; // Commence invisible pour l'animation
             
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'bot-avatar';
             botMessageDiv.appendChild(avatarDiv);
             
+            // Créer un conteneur pour le texte
+            const textContainer = document.createElement('span');
+            botMessageDiv.appendChild(textContainer);
+            
             let messageText = Array.isArray(data) ? data[0].output : data.output;
+            
+            // Ajouter le message au DOM avant l'animation
+            messagesContainer.appendChild(botMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
             if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
                 messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
-                botMessageDiv.innerHTML += messageText;
+                typeWriter(textContainer, messageText, 20);
             } else {
                 messageText = convertMarkdownLinksToHtml(messageText);
                 messageText = messageText.replace(/\\n/g, '<br>');
                 messageText = messageText.replace(/\n/g, '<br>');
-                botMessageDiv.innerHTML += messageText;
+                typeWriter(textContainer, messageText, 20);
             }
-            
-            messagesContainer.appendChild(botMessageDiv);
-            
-            // Déclencher l'animation après un court délai
-            setTimeout(() => {
-                botMessageDiv.style.opacity = '1';
-            }, 50);
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error('Error:', error);
             
@@ -635,21 +747,20 @@
             
             const errorMessageDiv = document.createElement('div');
             errorMessageDiv.className = 'chat-message bot';
-            errorMessageDiv.style.opacity = '0'; // Commence invisible pour l'animation
             
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'bot-avatar';
             errorMessageDiv.appendChild(avatarDiv);
             
-            errorMessageDiv.innerHTML += "Désolé, une erreur est survenue. Veuillez réessayer.";
+            // Créer un conteneur pour le texte
+            const textContainer = document.createElement('span');
+            errorMessageDiv.appendChild(textContainer);
+            
             messagesContainer.appendChild(errorMessageDiv);
-            
-            // Déclencher l'animation après un court délai
-            setTimeout(() => {
-                errorMessageDiv.style.opacity = '1';
-            }, 50);
-            
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Animer le message d'erreur
+            typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
         }
     }
 
@@ -718,5 +829,27 @@
             chatContainer.style.display = 'none';
             toggleButton.classList.remove('hidden');
         }, 300);
+    });
+
+    // Variable pour suivre si le chat a déjà été ouvert
+    let chatHasBeenOpened = false;
+
+    // Afficher le popup après un délai
+    setTimeout(() => {
+        if (!chatHasBeenOpened && !chatContainer.classList.contains('open')) {
+            chatPopup.classList.add('show');
+        }
+    }, 3000); // Apparaît après 3 secondes
+
+    // Masquer le popup si on clique dessus ou sur le bouton
+    chatPopup.addEventListener('click', () => {
+        toggleButton.click();
+    });
+
+    // Modifier le gestionnaire du bouton toggle pour gérer le popup
+    const originalToggleHandler = toggleButton.onclick;
+    toggleButton.addEventListener('click', () => {
+        chatHasBeenOpened = true;
+        chatPopup.classList.remove('show');
     });
 })();
