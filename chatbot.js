@@ -33,6 +33,9 @@
             border: 1px solid rgba(255, 128, 0, 0.2);
             overflow: hidden;
             font-family: inherit;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .n8n-chat-widget .chat-container.position-left {
@@ -43,6 +46,13 @@
         .n8n-chat-widget .chat-container.open {
             display: flex;
             flex-direction: column;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .n8n-chat-widget .chat-container.closing {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
         }
 
         .n8n-chat-widget .brand-header {
@@ -191,7 +201,7 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(255, 128, 0, 0.3);
             z-index: 999;
-            transition: transform 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -204,6 +214,11 @@
 
         .n8n-chat-widget .chat-toggle:hover {
             transform: scale(1.05);
+        }
+
+        .n8n-chat-widget .chat-toggle.hidden {
+            transform: scale(0);
+            opacity: 0;
         }
 
         .n8n-chat-widget .chat-toggle svg {
@@ -373,6 +388,26 @@
         .n8n-chat-widget .predefined-messages.hide {
             animation: fadeOut 0.3s ease forwards;
         }
+
+        /* Animation d'apparition pour les messages du bot */
+        @keyframes messageAppear {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .n8n-chat-widget .chat-message.bot {
+            animation: messageAppear 0.4s ease-out;
+        }
+
+        .n8n-chat-widget .bot-avatar {
+            animation: messageAppear 0.3s ease-out;
+        }
     `;
 
     // Inject styles
@@ -404,7 +439,6 @@
         "J'aimerais automatiser une tâche dans mon entreprise, par où commencer ?",
         "Quels outils sont compatibles avec votre service ?",
         "Combien coûte une automatisation personnalisée ?",
-        "Est-ce que vous proposez des solutions clés en main ?",
         "Moi aussi je peux avoir un chatbot comme celui-ci ?! 😍"
     ];
 
@@ -566,6 +600,7 @@
             messagesContainer.removeChild(typingIndicator);
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'chat-message bot';
+            botMessageDiv.style.opacity = '0'; // Commence invisible pour l'animation
             
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'bot-avatar';
@@ -584,6 +619,12 @@
             }
             
             messagesContainer.appendChild(botMessageDiv);
+            
+            // Déclencher l'animation après un court délai
+            setTimeout(() => {
+                botMessageDiv.style.opacity = '1';
+            }, 50);
+            
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error('Error:', error);
@@ -594,6 +635,7 @@
             
             const errorMessageDiv = document.createElement('div');
             errorMessageDiv.className = 'chat-message bot';
+            errorMessageDiv.style.opacity = '0'; // Commence invisible pour l'animation
             
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'bot-avatar';
@@ -601,6 +643,12 @@
             
             errorMessageDiv.innerHTML += "Désolé, une erreur est survenue. Veuillez réessayer.";
             messagesContainer.appendChild(errorMessageDiv);
+            
+            // Déclencher l'animation après un court délai
+            setTimeout(() => {
+                errorMessageDiv.style.opacity = '1';
+            }, 50);
+            
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
@@ -634,11 +682,41 @@
     });
     
     toggleButton.addEventListener('click', () => {
-        chatContainer.classList.toggle('open');
+        if (chatContainer.classList.contains('open')) {
+            // Fermeture
+            chatContainer.classList.add('closing');
+            toggleButton.classList.add('hidden');
+            
+            setTimeout(() => {
+                chatContainer.classList.remove('open', 'closing');
+                chatContainer.style.display = 'none';
+                toggleButton.classList.remove('hidden');
+            }, 300);
+        } else {
+            // Ouverture
+            chatContainer.style.display = 'flex';
+            toggleButton.classList.add('hidden');
+            
+            // Force reflow pour que l'animation fonctionne
+            void chatContainer.offsetWidth;
+            
+            chatContainer.classList.add('open');
+            
+            setTimeout(() => {
+                toggleButton.classList.remove('hidden');
+            }, 100);
+        }
     });
 
     const closeButton = chatContainer.querySelector('.close-button');
     closeButton.addEventListener('click', () => {
-        chatContainer.classList.remove('open');
+        chatContainer.classList.add('closing');
+        toggleButton.classList.add('hidden');
+        
+        setTimeout(() => {
+            chatContainer.classList.remove('open', 'closing');
+            chatContainer.style.display = 'none';
+            toggleButton.classList.remove('hidden');
+        }, 300);
     });
 })();
