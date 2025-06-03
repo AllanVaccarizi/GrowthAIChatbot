@@ -535,8 +535,19 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownLinksToHtml(text) {
+        // Convertir les liens Markdown [texte](url) en HTML
         const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-        return text.replace(markdownLinkRegex, '<a href="$2" target="_blank">$1</a>');
+        text = text.replace(markdownLinkRegex, '<a href="$2" target="_blank">$1</a>');
+        
+        // Convertir le gras Markdown **texte** en HTML
+        const boldRegex = /\*\*([^\*]+)\*\*/g;
+        text = text.replace(boldRegex, '<strong>$1</strong>');
+        
+        // Convertir l'italique Markdown *texte* en HTML (en évitant de confondre avec le gras)
+        const italicRegex = /\*([^\*]+)\*/g;
+        text = text.replace(italicRegex, '<em>$1</em>');
+        
+        return text;
     }
 
     const chatContainer = document.createElement('div');
