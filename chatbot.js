@@ -309,6 +309,70 @@
             font-size: 14px;
             line-height: 1.4;
         }
+
+        /* Styles pour les messages pré-rédigés */
+        .n8n-chat-widget .predefined-messages {
+            padding: 16px;
+            background: var(--chat--color-background);
+            border-bottom: 1px solid rgba(255, 128, 0, 0.1);
+        }
+
+        .n8n-chat-widget .predefined-messages-title {
+            font-size: 12px;
+            color: var(--chat--color-font);
+            opacity: 0.7;
+            margin-bottom: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .n8n-chat-widget .predefined-message-button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border: 1px solid rgba(255, 128, 0, 0.15);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--chat--color-font);
+            font-family: 'Archivo', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .n8n-chat-widget .predefined-message-button:last-child {
+            margin-bottom: 0;
+        }
+
+        .n8n-chat-widget .predefined-message-button:hover {
+            background: linear-gradient(135deg, rgba(255, 128, 0, 0.1) 0%, rgba(231, 191, 38, 0.1) 100%);
+            border-color: var(--chat--color-primary);
+            transform: translateX(4px);
+        }
+
+        .n8n-chat-widget .predefined-message-button:active {
+            transform: scale(0.98);
+        }
+
+        /* Animation de sortie pour les messages pré-rédigés */
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .n8n-chat-widget .predefined-messages.hide {
+            animation: fadeOut 0.3s ease forwards;
+        }
     `;
 
     // Inject styles
@@ -334,6 +398,15 @@
             fontColor: '#1B1919'
         }
     };
+
+    // Messages pré-rédigés
+    const predefinedMessages = [
+        "J'aimerais automatiser une tâche dans mon entreprise, par où commencer ?",
+        "Quels outils sont compatibles avec votre service ?",
+        "Combien coûte une automatisation personnalisée ?",
+        "Est-ce que vous proposez des solutions clés en main ?",
+        "Moi aussi je peux avoir un chatbot comme celui-ci ?! 😍"
+    ];
 
     // Merge user config with defaults
     const config = window.GrowthAIChatConfig ? 
@@ -373,6 +446,12 @@
                 <h3>${config.branding.welcomeText}</h3>
                 <p>Je suis là pour vous aider avec vos questions. N'hésitez pas à me poser votre question !</p>
             </div>
+            <div class="predefined-messages">
+                <div class="predefined-messages-title">Questions fréquentes</div>
+                ${predefinedMessages.map(msg => 
+                    `<button class="predefined-message-button">${msg}</button>`
+                ).join('')}
+            </div>
             <div class="chat-messages"></div>
             <div class="chat-input">
                 <textarea placeholder="Posez votre question..." rows="1"></textarea>
@@ -398,6 +477,7 @@
     const messagesContainer = chatContainer.querySelector('.chat-messages');
     const textarea = chatContainer.querySelector('textarea');
     const sendButton = chatContainer.querySelector('button[type="submit"]');
+    const predefinedMessagesContainer = chatContainer.querySelector('.predefined-messages');
 
     function generateUUID() {
         return crypto.randomUUID();
@@ -434,8 +514,21 @@
         }
     }
 
+    // Fonction pour masquer les messages pré-rédigés
+    function hidePredefinedMessages() {
+        if (predefinedMessagesContainer && !predefinedMessagesContainer.classList.contains('hide')) {
+            predefinedMessagesContainer.classList.add('hide');
+            setTimeout(() => {
+                predefinedMessagesContainer.style.display = 'none';
+            }, 300);
+        }
+    }
+
     async function sendMessage(message) {
         await initializeSession();
+
+        // Masquer les messages pré-rédigés dès qu'un message est envoyé
+        hidePredefinedMessages();
 
         const messageData = {
             action: "sendMessage",
@@ -511,6 +604,15 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
+
+    // Gestionnaire pour les messages pré-rédigés
+    const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
+    predefinedMessageButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const message = button.textContent;
+            sendMessage(message);
+        });
+    });
 
     sendButton.addEventListener('click', () => {
         const message = textarea.value.trim();
