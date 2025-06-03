@@ -480,6 +480,24 @@
         .n8n-chat-widget .chat-popup.show {
             animation: popupBounce 2s ease-in-out infinite;
         }
+        .n8n-chat-widget .chat-message strong {
+    font-weight: 700;
+    color: inherit;
+        }
+        .n8n-chat-widget .chat-message em {
+            font-style: italic;
+            color: inherit;
+        }
+
+        .n8n-chat-widget .chat-message.bot strong {
+            color: var(--chat--color-font);
+            font-weight: 700;
+        }
+
+        .n8n-chat-widget .chat-message.bot em {
+            color: var(--chat--color-font);
+            font-style: italic;
+}
     `;
 
     // Inject styles
@@ -534,10 +552,23 @@
     widgetContainer.style.setProperty('--n8n-chat-background-color', config.style.backgroundColor);
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
-    function convertMarkdownLinksToHtml(text) {
-        const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-        return text.replace(markdownLinkRegex, '<a href="$2" target="_blank">$1</a>');
-    }
+    function convertMarkdownToHtml(text) {
+    // 1. D'abord traiter les liens markdown [texte](url)
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // 2. Traiter le texte en gras **texte**
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // 3. Traiter le texte en italique *texte* (optionnel, attention à ne pas interférer avec le gras)
+    // On utilise une regex plus précise pour éviter les conflits
+    text = text.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+    
+    // 4. Traiter les retours à la ligne
+    text = text.replace(/\\n/g, '<br>');
+    text = text.replace(/\n/g, '<br>');
+    
+    return text;
+}
 
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
@@ -733,7 +764,7 @@
                 messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
                 typeWriter(textContainer, messageText, 20);
             } else {
-                messageText = convertMarkdownLinksToHtml(messageText);
+                messageText = convertMarkdownToHtml(messageText);
                 messageText = messageText.replace(/\\n/g, '<br>');
                 messageText = messageText.replace(/\n/g, '<br>');
                 typeWriter(textContainer, messageText, 20);
