@@ -976,34 +976,8 @@ predefinedMessageButtons.forEach(button => {
     });
     
     toggleButton.addEventListener('click', () => {
-        if (chatContainer.classList.contains('open')) {
-            // Fermeture
-            chatContainer.classList.add('closing');
-            toggleButton.classList.add('hidden');
-            
-            setTimeout(() => {
-                chatContainer.classList.remove('open', 'closing');
-                chatContainer.style.display = 'none';
-                toggleButton.classList.remove('hidden');
-            }, 300);
-        } else {
-            // Ouverture
-            chatContainer.style.display = 'flex';
-            toggleButton.classList.add('hidden');
-            
-            // Force reflow pour que l'animation fonctionne
-            void chatContainer.offsetWidth;
-            
-            chatContainer.classList.add('open');
-            
-            setTimeout(() => {
-                toggleButton.classList.remove('hidden');
-            }, 100);
-        }
-    });
-
-    const closeButton = chatContainer.querySelector('.close-button');
-    closeButton.addEventListener('click', () => {
+    if (chatContainer.classList.contains('open')) {
+        // Fermeture
         chatContainer.classList.add('closing');
         toggleButton.classList.add('hidden');
         
@@ -1011,18 +985,67 @@ predefinedMessageButtons.forEach(button => {
             chatContainer.classList.remove('open', 'closing');
             chatContainer.style.display = 'none';
             toggleButton.classList.remove('hidden');
+            
+            // Afficher le popup après fermeture
+            handlePopupDisplay();
         }, 300);
-    });
+    } else {
+        // Ouverture
+        chatContainer.style.display = 'flex';
+        toggleButton.classList.add('hidden');
+        
+        // Force reflow pour que l'animation fonctionne
+        void chatContainer.offsetWidth;
+        
+        chatContainer.classList.add('open');
+        chatHasBeenOpened = true;
+        
+        // Masquer le popup lors de l'ouverture
+        chatPopup.classList.remove('show');
+        
+        setTimeout(() => {
+            toggleButton.classList.remove('hidden');
+        }, 100);
+    }
+});
+
+    const closeButton = chatContainer.querySelector('.close-button');
+closeButton.addEventListener('click', () => {
+    chatContainer.classList.add('closing');
+    toggleButton.classList.add('hidden');
+    
+    setTimeout(() => {
+        chatContainer.classList.remove('open', 'closing');
+        chatContainer.style.display = 'none';
+        toggleButton.classList.remove('hidden');
+        
+        // Afficher le popup après fermeture
+        handlePopupDisplay();
+    }, 300);
+});
 
     // Variable pour suivre si le chat a déjà été ouvert
-    let chatHasBeenOpened = false;
+let chatHasBeenOpened = false;
 
-    // Afficher le popup après un délai
-    setTimeout(() => {
-        if (!chatHasBeenOpened && !chatContainer.classList.contains('open')) {
-            chatPopup.classList.add('show');
-        }
-    }, 3000); // Apparaît après 3 secondes
+// Fonction pour gérer l'affichage du popup
+function handlePopupDisplay() {
+    if (!chatContainer.classList.contains('open')) {
+        // Afficher le popup avec un petit délai après fermeture
+        setTimeout(() => {
+            if (!chatContainer.classList.contains('open')) {
+                chatPopup.classList.add('show');
+            }
+        }, 1000); // 1 seconde après fermeture
+    } else {
+        // Masquer le popup si le chat est ouvert
+        chatPopup.classList.remove('show');
+    }
+}
+
+// Afficher le popup initial après ouverture automatique (si fermé)
+setTimeout(() => {
+    handlePopupDisplay();
+}, 2000); // Après que l'auto-ouverture soit terminée
 
     // Masquer le popup si on clique dessus ou sur le bouton
     chatPopup.addEventListener('click', () => {
