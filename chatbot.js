@@ -33,6 +33,9 @@
             border: 1px solid rgba(255, 128, 0, 0.2);
             overflow: hidden;
             font-family: inherit;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .n8n-chat-widget .chat-container.position-left {
@@ -43,6 +46,13 @@
         .n8n-chat-widget .chat-container.open {
             display: flex;
             flex-direction: column;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .n8n-chat-widget .chat-container.closing {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
         }
 
         .n8n-chat-widget .brand-header {
@@ -191,7 +201,7 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(255, 128, 0, 0.3);
             z-index: 999;
-            transition: transform 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -204,6 +214,11 @@
 
         .n8n-chat-widget .chat-toggle:hover {
             transform: scale(1.05);
+        }
+
+        .n8n-chat-widget .chat-toggle.hidden {
+            transform: scale(0);
+            opacity: 0;
         }
 
         .n8n-chat-widget .chat-toggle svg {
@@ -309,6 +324,180 @@
             font-size: 14px;
             line-height: 1.4;
         }
+
+        /* Styles pour les messages pré-rédigés */
+        .n8n-chat-widget .predefined-messages {
+            padding: 16px;
+            background: var(--chat--color-background);
+            border-bottom: 1px solid rgba(255, 128, 0, 0.1);
+        }
+
+        .n8n-chat-widget .predefined-messages-title {
+            font-size: 12px;
+            color: var(--chat--color-font);
+            opacity: 0.7;
+            margin-bottom: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .n8n-chat-widget .predefined-message-button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border: 1px solid rgba(255, 128, 0, 0.15);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--chat--color-font);
+            font-family: 'Archivo', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .n8n-chat-widget .predefined-message-button:last-child {
+            margin-bottom: 0;
+        }
+
+        .n8n-chat-widget .predefined-message-button:hover {
+            background: linear-gradient(135deg, rgba(255, 128, 0, 0.1) 0%, rgba(231, 191, 38, 0.1) 100%);
+            border-color: var(--chat--color-primary);
+            transform: translateX(4px);
+        }
+
+        .n8n-chat-widget .predefined-message-button:active {
+            transform: scale(0.98);
+        }
+
+        /* Animation de sortie pour les messages pré-rédigés */
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .n8n-chat-widget .predefined-messages.hide {
+            animation: fadeOut 0.3s ease forwards;
+        }
+
+        /* Animation d'apparition pour les messages du bot */
+        @keyframes messageAppear {
+            0% {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .n8n-chat-widget .chat-message.bot {
+            animation: messageAppear 0.3s ease-out;
+        }
+
+        .n8n-chat-widget .bot-avatar {
+            animation: messageAppear 0.2s ease-out;
+        }
+
+        /* Effet curseur clignotant pour l'effet machine à écrire */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .n8n-chat-widget .chat-message.bot.typing::after {
+            content: '|';
+            animation: blink 1s infinite;
+            color: var(--chat--color-primary);
+            font-weight: bold;
+        }
+
+        /* Popup "Une question ?" */
+        .n8n-chat-widget .chat-popup {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: #DC2626;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Archivo', sans-serif;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+            opacity: 0;
+            transform: scale(0) translateX(20px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+            z-index: 998;
+            cursor: pointer;
+        }
+
+        .n8n-chat-widget .chat-popup.position-left {
+            right: auto;
+            left: 20px;
+            transform: scale(0) translateX(-20px);
+        }
+
+        .n8n-chat-widget .chat-popup.show {
+            opacity: 1;
+            transform: scale(1) translateX(0);
+            pointer-events: auto;
+        }
+
+        .n8n-chat-widget .chat-popup::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 30px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #DC2626;
+        }
+
+        .n8n-chat-widget .chat-popup.position-left::after {
+            right: auto;
+            left: 30px;
+        }
+
+        @keyframes popupBounce {
+            0%, 100% { transform: scale(1) translateX(0); }
+            50% { transform: scale(1.05) translateX(0); }
+        }
+
+        .n8n-chat-widget .chat-popup.show {
+            animation: popupBounce 2s ease-in-out infinite;
+        }
+        .n8n-chat-widget .chat-message strong {
+    font-weight: 700;
+    color: inherit;
+        }
+        .n8n-chat-widget .chat-message em {
+            font-style: italic;
+            color: inherit;
+        }
+
+        .n8n-chat-widget .chat-message.bot strong {
+            color: var(--chat--color-font);
+            font-weight: 700;
+        }
+
+        .n8n-chat-widget .chat-message.bot em {
+            color: var(--chat--color-font);
+            font-style: italic;
+}
     `;
 
     // Inject styles
@@ -335,6 +524,14 @@
         }
     };
 
+    // Messages pré-rédigés
+    const predefinedMessages = [
+        "J'aimerais automatiser une tâche dans mon entreprise, par où commencer ?",
+        "Quels outils sont compatibles avec votre service ?",
+        "Combien coûte une automatisation personnalisée ?",
+        "Moi aussi je peux avoir un chatbot comme celui-ci ?! 😍"
+    ];
+
     // Merge user config with defaults
     const config = window.GrowthAIChatConfig ? 
         {
@@ -356,24 +553,24 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownToHtml(text) {
-    // Convertir les liens Markdown [texte](url) en liens HTML
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    
-    // Convertir le texte en gras **texte** en HTML
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
-    // Convertir les listes avec puces • et ✓
-    text = text.replace(/^([•✓])\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">$1 $2</div>');
-    
-    // Convertir les listes avec puces markdown (- ou *)
-    text = text.replace(/^[-*]\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">• $1</div>');
-    
-    // Convertir les retours à la ligne
-    text = text.replace(/\\n/g, '<br>');
-    text = text.replace(/\n/g, '<br>');
-    
-    return text;
-}
+        // Convertir les liens Markdown [texte](url) en liens HTML
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        
+        // Convertir le texte en gras **texte** en HTML
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Convertir les listes avec puces • et ✓
+        text = text.replace(/^([•✓])\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">$1 $2</div>');
+        
+        // Convertir les listes avec puces markdown (- ou *)
+        text = text.replace(/^[-*]\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">• $1</div>');
+        
+        // Convertir les retours à la ligne
+        text = text.replace(/\\n/g, '<br>');
+        text = text.replace(/\n/g, '<br>');
+        
+        return text;
+    }
 
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
@@ -387,6 +584,12 @@
             <div class="initial-message">
                 <h3>${config.branding.welcomeText}</h3>
                 <p>Je suis là pour vous aider avec vos questions. N'hésitez pas à me poser votre question !</p>
+            </div>
+            <div class="predefined-messages">
+                <div class="predefined-messages-title">Questions fréquentes</div>
+                ${predefinedMessages.map(msg => 
+                    `<button class="predefined-message-button">${msg}</button>`
+                ).join('')}
             </div>
             <div class="chat-messages"></div>
             <div class="chat-input">
@@ -405,14 +608,21 @@
             <path d="M12 2C6.477 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2.5 21.5l4.5-.838A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.476 0-2.886-.313-4.156-.878l-3.156.586.586-3.156A7.962 7.962 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/>
         </svg>`;
     
+    // Créer le popup "Une question ?"
+    const chatPopup = document.createElement('div');
+    chatPopup.className = `chat-popup${config.style.position === 'left' ? ' position-left' : ''}`;
+    chatPopup.textContent = 'Une question ?';
+    
     widgetContainer.appendChild(chatContainer);
     widgetContainer.appendChild(toggleButton);
+    widgetContainer.appendChild(chatPopup);
     document.body.appendChild(widgetContainer);
 
     const chatInterface = chatContainer.querySelector('.chat-interface');
     const messagesContainer = chatContainer.querySelector('.chat-messages');
     const textarea = chatContainer.querySelector('textarea');
     const sendButton = chatContainer.querySelector('button[type="submit"]');
+    const predefinedMessagesContainer = chatContainer.querySelector('.predefined-messages');
 
     function generateUUID() {
         return crypto.randomUUID();
@@ -449,8 +659,57 @@
         }
     }
 
+    // Fonction pour masquer les messages pré-rédigés
+    function hidePredefinedMessages() {
+        if (predefinedMessagesContainer && !predefinedMessagesContainer.classList.contains('hide')) {
+            predefinedMessagesContainer.classList.add('hide');
+            setTimeout(() => {
+                predefinedMessagesContainer.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    // Fonction pour créer l'effet machine à écrire
+    function typeWriter(element, text, speed = 30) {
+        let index = 0;
+        const parentDiv = element.parentElement;
+        parentDiv.classList.add('typing');
+        element.innerHTML = ''; // Vider le contenu initial
+        
+        function type() {
+            if (index < text.length) {
+                if (text.substring(index, index + 4) === '<br>') {
+                    element.innerHTML += '<br>';
+                    index += 4;
+                } else if (text.charAt(index) === '<') {
+                    // Gérer les balises HTML
+                    let tagEnd = text.indexOf('>', index);
+                    if (tagEnd !== -1) {
+                        element.innerHTML += text.substring(index, tagEnd + 1);
+                        index = tagEnd + 1;
+                    } else {
+                        element.innerHTML += text.charAt(index);
+                        index++;
+                    }
+                } else {
+                    element.innerHTML += text.charAt(index);
+                    index++;
+                }
+                setTimeout(type, speed);
+            } else {
+                // Retirer la classe typing et le curseur à la fin
+                parentDiv.classList.remove('typing');
+            }
+        }
+        
+        type();
+    }
+
     async function sendMessage(message) {
         await initializeSession();
+
+        // Masquer les messages pré-rédigés dès qu'un message est envoyé
+        hidePredefinedMessages();
 
         const messageData = {
             action: "sendMessage",
@@ -493,20 +752,25 @@
             avatarDiv.className = 'bot-avatar';
             botMessageDiv.appendChild(avatarDiv);
             
+            // Créer un conteneur pour le texte
+            const textContainer = document.createElement('span');
+            botMessageDiv.appendChild(textContainer);
+            
             let messageText = Array.isArray(data) ? data[0].output : data.output;
+            
+            // Ajouter le message au DOM avant l'animation
+            messagesContainer.appendChild(botMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
             if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
                 messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
-                botMessageDiv.innerHTML += messageText;
+                typeWriter(textContainer, messageText, 20);
             } else {
-                messageText = convertMarkdownLinksToHtml(messageText);
+                messageText = convertMarkdownToHtml(messageText);
                 messageText = messageText.replace(/\\n/g, '<br>');
                 messageText = messageText.replace(/\n/g, '<br>');
-                botMessageDiv.innerHTML += messageText;
+                typeWriter(textContainer, messageText, 20);
             }
-            
-            messagesContainer.appendChild(botMessageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error('Error:', error);
             
@@ -521,11 +785,26 @@
             avatarDiv.className = 'bot-avatar';
             errorMessageDiv.appendChild(avatarDiv);
             
-            errorMessageDiv.innerHTML += "Désolé, une erreur est survenue. Veuillez réessayer.";
+            // Créer un conteneur pour le texte
+            const textContainer = document.createElement('span');
+            errorMessageDiv.appendChild(textContainer);
+            
             messagesContainer.appendChild(errorMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Animer le message d'erreur
+            typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
         }
     }
+
+    // Gestionnaire pour les messages pré-rédigés
+    const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
+    predefinedMessageButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const message = button.textContent;
+            sendMessage(message);
+        });
+    });
 
     sendButton.addEventListener('click', () => {
         const message = textarea.value.trim();
@@ -547,11 +826,63 @@
     });
     
     toggleButton.addEventListener('click', () => {
-        chatContainer.classList.toggle('open');
+        if (chatContainer.classList.contains('open')) {
+            // Fermeture
+            chatContainer.classList.add('closing');
+            toggleButton.classList.add('hidden');
+            
+            setTimeout(() => {
+                chatContainer.classList.remove('open', 'closing');
+                chatContainer.style.display = 'none';
+                toggleButton.classList.remove('hidden');
+            }, 300);
+        } else {
+            // Ouverture
+            chatContainer.style.display = 'flex';
+            toggleButton.classList.add('hidden');
+            
+            // Force reflow pour que l'animation fonctionne
+            void chatContainer.offsetWidth;
+            
+            chatContainer.classList.add('open');
+            
+            setTimeout(() => {
+                toggleButton.classList.remove('hidden');
+            }, 100);
+        }
     });
 
     const closeButton = chatContainer.querySelector('.close-button');
     closeButton.addEventListener('click', () => {
-        chatContainer.classList.remove('open');
+        chatContainer.classList.add('closing');
+        toggleButton.classList.add('hidden');
+        
+        setTimeout(() => {
+            chatContainer.classList.remove('open', 'closing');
+            chatContainer.style.display = 'none';
+            toggleButton.classList.remove('hidden');
+        }, 300);
+    });
+
+    // Variable pour suivre si le chat a déjà été ouvert
+    let chatHasBeenOpened = false;
+
+    // Afficher le popup après un délai
+    setTimeout(() => {
+        if (!chatHasBeenOpened && !chatContainer.classList.contains('open')) {
+            chatPopup.classList.add('show');
+        }
+    }, 3000); // Apparaît après 3 secondes
+
+    // Masquer le popup si on clique dessus ou sur le bouton
+    chatPopup.addEventListener('click', () => {
+        toggleButton.click();
+    });
+
+    // Modifier le gestionnaire du bouton toggle pour gérer le popup
+    const originalToggleHandler = toggleButton.onclick;
+    toggleButton.addEventListener('click', () => {
+        chatHasBeenOpened = true;
+        chatPopup.classList.remove('show');
     });
 })();
