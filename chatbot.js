@@ -609,6 +609,13 @@
     widgetContainer.appendChild(toggleButton);
     widgetContainer.appendChild(chatPopup);
     document.body.appendChild(widgetContainer);
+    // Ouvrir automatiquement le chatbot au chargement
+setTimeout(() => {
+    chatContainer.style.display = 'flex';
+    void chatContainer.offsetWidth; // Force reflow
+    chatContainer.classList.add('open');
+    chatHasBeenOpened = true;
+}, 500); // Attendre 500ms pour une apparition fluide
 
     const chatInterface = chatContainer.querySelector('.chat-interface');
     const messagesContainer = chatContainer.querySelector('.chat-messages');
