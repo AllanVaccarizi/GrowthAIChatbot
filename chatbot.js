@@ -553,15 +553,12 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownToHtml(text) {
-    console.log("Fonction appelée avec:", JSON.stringify(text));
-    
     // Juste les conversions de base
     text = text.replace(/\\n/g, '\n');
     text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     text = text.replace(/\n/g, '<br>');
     
-    console.log("Fonction retourne:", text);
     return text;
 }
     const chatContainer = document.createElement('div');
@@ -662,39 +659,89 @@
     }
 
     // Fonction pour créer l'effet machine à écrire
-    function typeWriter(element, text, speed = 30) {
+    function typeWriter(element, htmlText, speed = 30) {
     let index = 0;
     const parentDiv = element.parentElement;
     parentDiv.classList.add('typing');
-    element.innerHTML = ''; // Vider le contenu initial
+    element.innerHTML = '';
+    
+    // Convertir le HTML en texte visible + balises cachées
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlText;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
     
     function type() {
-        if (index < text.length) {
-            if (text.substring(index, index + 4) === '<br>') {
-                element.innerHTML += '<br>';
-                index += 4;
-            } else if (text.charAt(index) === '<') {
-                // Gérer les balises HTML complètes
-                let tagEnd = text.indexOf('>', index);
-                if (tagEnd !== -1) {
-                    let fullTag = text.substring(index, tagEnd + 1);
-                    element.innerHTML += fullTag;
-                    index = tagEnd + 1;
-                } else {
-                    element.innerHTML += text.charAt(index);
-                    index++;
-                }
-            } else {
-                element.innerHTML += text.charAt(index);
-                index++;
-            }
+        if (index < textContent.length) {
+            // Récupérer le texte partiel
+            const partialText = textContent.substring(0, index + 1);
             
-            // Faire défiler vers le bas à chaque caractère
+            // Reconstruire le HTML avec le texte partiel
+            let currentHtml = htmlText;
+            
+            // Remplacer le contenu textuel par le texte partiel
+            const regex = /^(.*?)([^<>]*?)$/;
+            let tempElement = document.createElement('div');
+            tempElement.innerHTML = htmlText;
+            
+            // Méthode simple : injecter caractère par caractère en préservant les balises
+            updateElementWithPartialText(element, htmlText, index + 1);
+            
+            index++;
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             setTimeout(type, speed);
         } else {
-            // Retirer la classe typing et le curseur à la fin
             parentDiv.classList.remove('typing');
+        }
+    }
+    
+    function updateElementWithPartialText(elem, fullHtml, charCount) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = fullHtml;
+        
+        let currentCount = 0;
+        processNode(tempDiv, charCount);
+        elem.innerHTML = tempDiv.innerHTML;
+        
+        function processNode(node, targetCount) {
+            for (let i = 0; i < node.childNodes.length; i++) {
+                const child = node.childNodes[i];
+                
+                if (child.nodeType === Node.TEXT_NODE) {
+                    const textLength = child.textContent.length;
+                    if (currentCount + textLength <= targetCount) {
+                        currentCount += textLength;
+                    } else {
+                        const remainingChars = targetCount - currentCount;
+                        child.textContent = child.textContent.substring(0, remainingChars);
+                        currentCount = targetCount;
+                        // Supprimer les nœuds suivants
+                        while (node.childNodes[i + 1]) {
+                            node.removeChild(node.childNodes[i + 1]);
+                        }
+                        return;
+                    }
+                } else if (child.nodeType === Node.ELEMENT_NODE) {
+                    const textInElement = child.textContent.length;
+                    if (currentCount + textInElement <= targetCount) {
+                        currentCount += textInElement;
+                    } else {
+                        processNode(child, targetCount);
+                        // Supprimer les nœuds suivants
+                        while (node.childNodes[i + 1]) {
+                            node.removeChild(node.childNodes[i + 1]);
+                        }
+                        return;
+                    }
+                }
+                
+                if (currentCount >= targetCount) {
+                    // Supprimer les nœuds suivants
+                    while (node.childNodes[i + 1]) {
+                        node.removeChild(node.childNodes[i + 1]);
+                    }
+                    return;
+                }
+            }
         }
     }
     
@@ -762,8 +809,10 @@
 
 if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
     messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
+    typeWriter(textContainer, messageText, 20);
 } else {
     messageText = convertMarkdownToHtml(messageText);
+    typeWriter(textContainer, messageText, 20);
 }
 
 console.log("Texte après conversion:", messageText);
