@@ -173,16 +173,19 @@
         }
 
         .n8n-chat-widget .chat-input button {
-            background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: 0 20px;
-            cursor: pointer;
-            transition: transform 0.2s;
-            font-family: 'Archivo', sans-serif;
-            font-weight: 600;
-        }
+    background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0 20px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    font-family: 'Archivo', sans-serif;
+    font-weight: 600;
+    height: 100%;
+    min-height: 44px;
+    align-self: stretch;
+}
 
         .n8n-chat-widget .chat-input button:hover {
             transform: scale(1.05);
