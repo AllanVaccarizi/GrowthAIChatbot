@@ -763,6 +763,7 @@
             userId: ""
         }
     };
+    
     const userMessageDiv = document.createElement('div');
     userMessageDiv.className = 'chat-message user';
     userMessageDiv.textContent = message;
@@ -775,33 +776,70 @@
     messagesContainer.appendChild(typingIndicator);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    // Le reste de la fonction reste identique...
     try {
-    const response = await fetch(config.webhook.url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(messageData)
-    });
-    
-    const data = await response.json();
-    
-    // Si c'est l'erreur attendue, ne pas traiter comme une vraie erreur
-    if (data.message === 'Error in workflow') {
-        console.log('Erreur workflow attendue, en attente de la vraie réponse...');
-        return; // Sortir de la fonction, mais garder le typing
+        const response = await fetch(config.webhook.url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(messageData)
+        });
+        
+        const data = await response.json();
+        
+        console.log("Response data:", data); // Pour debug
+        
+        // TRAITER LA RÉPONSE MÊME SI ERREUR 500
+        messagesContainer.removeChild(typingIndicator);
+        const botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'chat-message bot';
+        
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        botMessageDiv.appendChild(avatarDiv);
+        
+        // Créer un conteneur pour le texte
+        const textContainer = document.createElement('span');
+        botMessageDiv.appendChild(textContainer);
+        
+        let messageText = Array.isArray(data) ? data[0].output : data.output;
+        
+        // Ajouter le message au DOM avant l'animation
+        messagesContainer.appendChild(botMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
+            messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
+            typeWriter(textContainer, messageText, 20);
+        } else {
+            messageText = convertMarkdownToHtml(messageText);
+            typeWriter(textContainer, messageText, 20);
+        }
+        
+    } catch (error) {
+        console.error('Vraie erreur réseau:', error);
+        
+        if (messagesContainer.contains(typingIndicator)) {
+            messagesContainer.removeChild(typingIndicator);
+        }
+        
+        const errorMessageDiv = document.createElement('div');
+        errorMessageDiv.className = 'chat-message bot';
+        
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        errorMessageDiv.appendChild(avatarDiv);
+        
+        // Créer un conteneur pour le texte
+        const textContainer = document.createElement('span');
+        errorMessageDiv.appendChild(textContainer);
+        
+        messagesContainer.appendChild(errorMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Animer le message d'erreur
+        typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
     }
-    
-    // Si on arrive ici, c'est la vraie réponse
-    messagesContainer.removeChild(typingIndicator);
-    const botMessageDiv = document.createElement('div');
-    // ... reste du code pour afficher la réponse
-    
-} catch (error) {
-    console.error('Vraie erreur:', error);
-    // Gérer les vraies erreurs
-}
 }
 
     // Gestionnaire pour les messages pré-rédigés
