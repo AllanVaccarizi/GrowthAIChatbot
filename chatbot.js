@@ -553,22 +553,22 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownToHtml(text) {
-    // 1. D'abord, normaliser les retours à la ligne
+    // 1. Normaliser les retours à la ligne
     text = text.replace(/\\n/g, '\n');
     
     // 2. Convertir les liens Markdown [texte](url) en liens HTML
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     
-    // 3. Convertir le texte en gras **texte** en HTML (sur une ou plusieurs lignes)
-    text = text.replace(/\*\*([^*]+?)\*\*/gs, '<strong>$1</strong>');
+    // 3. Convertir le texte en gras **texte** en HTML
+    text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
     
-    // 4. Convertir les listes avec tirets en puces
-    text = text.replace(/^(\s*)[-*]\s+(.+)$/gm, '$1• $2');
+    // 4. Convertir les emojis et puces en début de ligne
+    text = text.replace(/^([🤖⚡💼👨‍💼•✓])\s*/gm, '$1 ');
     
-    // 5. Ajouter un saut de ligne après chaque élément de liste
-    text = text.replace(/^(\s*)([•✓])\s+(.+)$/gm, '$1$2 $3<br>');
+    // 5. Convertir les tirets en puces
+    text = text.replace(/^(\s*)[-*]\s+/gm, '$1• ');
     
-    // 6. Convertir les retours à la ligne simples en <br>
+    // 6. Convertir les retours à la ligne en <br>
     text = text.replace(/\n/g, '<br>');
     
     // 7. Nettoyer les <br> multiples
@@ -676,39 +676,43 @@
 
     // Fonction pour créer l'effet machine à écrire
     function typeWriter(element, text, speed = 30) {
-        let index = 0;
-        const parentDiv = element.parentElement;
-        parentDiv.classList.add('typing');
-        element.innerHTML = ''; // Vider le contenu initial
-        
-        function type() {
-            if (index < text.length) {
-                if (text.substring(index, index + 4) === '<br>') {
-                    element.innerHTML += '<br>';
-                    index += 4;
-                } else if (text.charAt(index) === '<') {
-                    // Gérer les balises HTML
-                    let tagEnd = text.indexOf('>', index);
-                    if (tagEnd !== -1) {
-                        element.innerHTML += text.substring(index, tagEnd + 1);
-                        index = tagEnd + 1;
-                    } else {
-                        element.innerHTML += text.charAt(index);
-                        index++;
-                    }
+    let index = 0;
+    const parentDiv = element.parentElement;
+    parentDiv.classList.add('typing');
+    element.innerHTML = ''; // Vider le contenu initial
+    
+    function type() {
+        if (index < text.length) {
+            if (text.substring(index, index + 4) === '<br>') {
+                element.innerHTML += '<br>';
+                index += 4;
+            } else if (text.charAt(index) === '<') {
+                // Gérer les balises HTML complètes
+                let tagEnd = text.indexOf('>', index);
+                if (tagEnd !== -1) {
+                    let fullTag = text.substring(index, tagEnd + 1);
+                    element.innerHTML += fullTag;
+                    index = tagEnd + 1;
                 } else {
                     element.innerHTML += text.charAt(index);
                     index++;
                 }
-                setTimeout(type, speed);
             } else {
-                // Retirer la classe typing et le curseur à la fin
-                parentDiv.classList.remove('typing');
+                element.innerHTML += text.charAt(index);
+                index++;
             }
+            
+            // Faire défiler vers le bas à chaque caractère
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            setTimeout(type, speed);
+        } else {
+            // Retirer la classe typing et le curseur à la fin
+            parentDiv.classList.remove('typing');
         }
-        
-        type();
     }
+    
+    type();
+}
 
     async function sendMessage(message) {
         await initializeSession();
