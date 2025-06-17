@@ -553,30 +553,17 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownToHtml(text) {
-    // 1. Normaliser les retours à la ligne
+    console.log("Fonction appelée avec:", JSON.stringify(text));
+    
+    // Juste les conversions de base
     text = text.replace(/\\n/g, '\n');
-    
-    // 2. Convertir les liens Markdown [texte](url) en liens HTML
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    
-    // 3. Convertir le texte en gras **texte** en HTML
-    text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-    
-    // 4. Convertir les emojis et puces en début de ligne
-    text = text.replace(/^([🤖⚡💼👨‍💼•✓])\s*/gm, '$1 ');
-    
-    // 5. Convertir les tirets en puces
-    text = text.replace(/^(\s*)[-*]\s+/gm, '$1• ');
-    
-    // 6. Convertir les retours à la ligne en <br>
     text = text.replace(/\n/g, '<br>');
     
-    // 7. Nettoyer les <br> multiples
-    text = text.replace(/(<br>\s*){3,}/g, '<br><br>');
-    
+    console.log("Fonction retourne:", text);
     return text;
 }
-
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
     
@@ -771,15 +758,16 @@
             messagesContainer.appendChild(botMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
-                messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
-                typeWriter(textContainer, messageText, 20);
-            } else {
-                messageText = convertMarkdownToHtml(messageText);
-                messageText = messageText.replace(/\\n/g, '<br>');
-                messageText = messageText.replace(/\n/g, '<br>');
-                typeWriter(textContainer, messageText, 20);
-            }
+            console.log("Texte original:", JSON.stringify(messageText));
+
+if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
+    messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
+} else {
+    messageText = convertMarkdownToHtml(messageText);
+}
+
+console.log("Texte après conversion:", messageText);
+textContainer.innerHTML = messageText;
         } catch (error) {
             console.error('Error:', error);
             
