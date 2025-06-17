@@ -751,7 +751,7 @@
     type();
 }
 
-    async function sendMessage(message, existingTypingIndicator = null, skipUserMessage = false) {
+    async function sendMessage(message) {
     await initializeSession();
 
     const messageData = {
@@ -763,25 +763,17 @@
             userId: ""
         }
     };
+    const userMessageDiv = document.createElement('div');
+    userMessageDiv.className = 'chat-message user';
+    userMessageDiv.textContent = message;
+    messagesContainer.appendChild(userMessageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    // Créer le message utilisateur seulement si pas déjà fait
-    if (!skipUserMessage) {
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'chat-message user';
-        userMessageDiv.textContent = message;
-        messagesContainer.appendChild(userMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-    
-    // Utiliser l'indicateur existant ou en créer un nouveau
-    let typingIndicator = existingTypingIndicator;
-    if (!typingIndicator) {
-        typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-        messagesContainer.appendChild(typingIndicator);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'typing-indicator';
+    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+    messagesContainer.appendChild(typingIndicator);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     // Le reste de la fonction reste identique...
     try {
@@ -803,30 +795,17 @@
 }
 
     // Gestionnaire pour les messages pré-rédigés
-    const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
+    // Gestionnaire pour les messages pré-rédigés
+const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
 predefinedMessageButtons.forEach(button => {
     button.addEventListener('click', () => {
         const message = button.textContent;
         
-        // 1. Masquer immédiatement les messages pré-remplis
+        // Masquer immédiatement les messages pré-remplis
         hidePredefinedMessages();
         
-        // 2. Afficher immédiatement le message utilisateur
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'chat-message user';
-        userMessageDiv.textContent = message;
-        messagesContainer.appendChild(userMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // 3. Afficher immédiatement l'indicateur "typing"
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-        messagesContainer.appendChild(typingIndicator);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // 4. Envoyer le message (qui va remplacer le typing par la réponse)
-        sendMessage(message, typingIndicator, true); // true = skip user message creation
+        // Envoyer le message normalement
+        sendMessage(message);
     });
 });
 
