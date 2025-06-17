@@ -841,6 +841,85 @@
         typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
     }
 }
+async function sendMessageBackground(message, existingTypingIndicator) {
+    await initializeSession();
+
+    const messageData = {
+        action: "sendMessage",
+        sessionId: currentSessionId,
+        route: config.webhook.route,
+        chatInput: message,
+        metadata: {
+            userId: ""
+        }
+    };
+
+    try {
+        const response = await fetch(config.webhook.url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(messageData)
+        });
+        
+        const data = await response.json();
+        
+        console.log("Response data:", data);
+        
+        // Supprimer le typing indicator existant
+        if (messagesContainer.contains(existingTypingIndicator)) {
+            messagesContainer.removeChild(existingTypingIndicator);
+        }
+        
+        const botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'chat-message bot';
+        
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        botMessageDiv.appendChild(avatarDiv);
+        
+        const textContainer = document.createElement('span');
+        botMessageDiv.appendChild(textContainer);
+        
+        let messageText = Array.isArray(data) ? data[0].output : data.output;
+        
+        messagesContainer.appendChild(botMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
+            messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
+            typeWriter(textContainer, messageText, 20);
+        } else {
+            messageText = convertMarkdownToHtml(messageText);
+            typeWriter(textContainer, messageText, 20);
+        }
+        
+    } catch (error) {
+        console.error('Erreur réseau:', error);
+        
+        if (messagesContainer.contains(existingTypingIndicator)) {
+            messagesContainer.removeChild(existingTypingIndicator);
+        }
+        
+        // Afficher message d'erreur...
+        const errorMessageDiv = document.createElement('div');
+        errorMessageDiv.className = 'chat-message bot';
+        
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        errorMessageDiv.appendChild(avatarDiv);
+        
+        const textContainer = document.createElement('span');
+        errorMessageDiv.appendChild(textContainer);
+        
+        messagesContainer.appendChild(errorMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
+    }
+}
+
 
 // Gestionnaire pour les messages pré-rédigés
 const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
