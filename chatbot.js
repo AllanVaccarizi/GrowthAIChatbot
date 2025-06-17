@@ -777,21 +777,31 @@
 
     // Le reste de la fonction reste identique...
     try {
-        const response = await fetch(config.webhook.url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(messageData)
-        });
-        
-        const data = await response.json();
-        
-        messagesContainer.removeChild(typingIndicator);
-        // ... reste du code identique
-    } catch (error) {
-        // ... gestion d'erreur identique
+    const response = await fetch(config.webhook.url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messageData)
+    });
+    
+    const data = await response.json();
+    
+    // Si c'est l'erreur attendue, ne pas traiter comme une vraie erreur
+    if (data.message === 'Error in workflow') {
+        console.log('Erreur workflow attendue, en attente de la vraie réponse...');
+        return; // Sortir de la fonction, mais garder le typing
     }
+    
+    // Si on arrive ici, c'est la vraie réponse
+    messagesContainer.removeChild(typingIndicator);
+    const botMessageDiv = document.createElement('div');
+    // ... reste du code pour afficher la réponse
+    
+} catch (error) {
+    console.error('Vraie erreur:', error);
+    // Gérer les vraies erreurs
+}
 }
 
     // Gestionnaire pour les messages pré-rédigés
