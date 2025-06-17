@@ -848,12 +848,17 @@ textContainer.innerHTML = messageText;
 
     // Gestionnaire pour les messages pré-rédigés
     const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
-    predefinedMessageButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const message = button.textContent;
-            sendMessage(message);
-        });
+predefinedMessageButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const message = button.textContent;
+        
+        // Masquer immédiatement les messages pré-remplis
+        hidePredefinedMessages();
+        
+        // Envoyer le message
+        sendMessage(message);
     });
+});
 
     sendButton.addEventListener('click', () => {
         const message = textarea.value.trim();
