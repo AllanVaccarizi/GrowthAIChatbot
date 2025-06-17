@@ -553,23 +553,25 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownToHtml(text) {
-    // 1. Convertir les liens Markdown [texte](url) en liens HTML
+    // 1. D'abord, normaliser les retours à la ligne
+    text = text.replace(/\\n/g, '\n');
+    
+    // 2. Convertir les liens Markdown [texte](url) en liens HTML
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     
-    // 2. Convertir le texte en gras **texte** en HTML (même sur plusieurs lignes)
-    text = text.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+    // 3. Convertir le texte en gras **texte** en HTML (sur une ou plusieurs lignes)
+    text = text.replace(/\*\*([^*]+?)\*\*/gs, '<strong>$1</strong>');
     
-    // 3. Convertir les listes avec tirets (avec ou sans espaces avant)
-    text = text.replace(/^(\s*)[-*]\s+(.+)$/gm, '$1• $2<br>');
+    // 4. Convertir les listes avec tirets en puces
+    text = text.replace(/^(\s*)[-*]\s+(.+)$/gm, '$1• $2');
     
-    // 4. Convertir les listes avec puces existantes • et ✓
+    // 5. Ajouter un saut de ligne après chaque élément de liste
     text = text.replace(/^(\s*)([•✓])\s+(.+)$/gm, '$1$2 $3<br>');
     
-    // 5. Convertir les retours à la ligne \n en <br>
-    text = text.replace(/\\n/g, '<br>');
+    // 6. Convertir les retours à la ligne simples en <br>
     text = text.replace(/\n/g, '<br>');
     
-    // 6. Nettoyer les <br> multiples
+    // 7. Nettoyer les <br> multiples
     text = text.replace(/(<br>\s*){3,}/g, '<br><br>');
     
     return text;
