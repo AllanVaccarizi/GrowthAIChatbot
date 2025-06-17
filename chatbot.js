@@ -355,10 +355,25 @@
     widgetContainer.style.setProperty('--n8n-chat-background-color', config.style.backgroundColor);
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
-    function convertMarkdownLinksToHtml(text) {
-        const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-        return text.replace(markdownLinkRegex, '<a href="$2" target="_blank">$1</a>');
-    }
+    function convertMarkdownToHtml(text) {
+    // Convertir les liens Markdown [texte](url) en liens HTML
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // Convertir le texte en gras **texte** en HTML
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Convertir les listes avec puces • et ✓
+    text = text.replace(/^([•✓])\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">$1 $2</div>');
+    
+    // Convertir les listes avec puces markdown (- ou *)
+    text = text.replace(/^[-*]\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">• $1</div>');
+    
+    // Convertir les retours à la ligne
+    text = text.replace(/\\n/g, '<br>');
+    text = text.replace(/\n/g, '<br>');
+    
+    return text;
+}
 
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
