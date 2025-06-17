@@ -842,18 +842,31 @@
     }
 }
 
-    // Gestionnaire pour les messages pré-rédigés
-    // Gestionnaire pour les messages pré-rédigés
+// Gestionnaire pour les messages pré-rédigés
 const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
 predefinedMessageButtons.forEach(button => {
     button.addEventListener('click', () => {
         const message = button.textContent;
         
-        // Masquer immédiatement les messages pré-remplis
+        // 1. Masquer immédiatement les messages pré-remplis
         hidePredefinedMessages();
         
-        // Envoyer le message normalement
-        sendMessage(message);
+        // 2. Afficher immédiatement le message utilisateur
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'chat-message user';
+        userMessageDiv.textContent = message;
+        messagesContainer.appendChild(userMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // 3. Afficher immédiatement l'indicateur "typing"
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+        messagesContainer.appendChild(typingIndicator);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // 4. Envoyer la requête en arrière-plan
+        sendMessageBackground(message, typingIndicator);
     });
 });
 
