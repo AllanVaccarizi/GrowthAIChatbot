@@ -553,24 +553,27 @@
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
     function convertMarkdownToHtml(text) {
-        // Convertir les liens Markdown [texte](url) en liens HTML
-        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-        
-        // Convertir le texte en gras **texte** en HTML
-        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        
-        // Convertir les listes avec puces • et ✓
-        text = text.replace(/^([•✓])\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">$1 $2</div>');
-        
-        // Convertir les listes avec puces markdown (- ou *)
-        text = text.replace(/^[-*]\s+(.+)$/gm, '<div style="margin: 4px 0; padding-left: 8px;">• $1</div>');
-        
-        // Convertir les retours à la ligne
-        text = text.replace(/\\n/g, '<br>');
-        text = text.replace(/\n/g, '<br>');
-        
-        return text;
-    }
+    // 1. Convertir les liens Markdown [texte](url) en liens HTML
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // 2. Convertir le texte en gras **texte** en HTML (même sur plusieurs lignes)
+    text = text.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+    
+    // 3. Convertir les listes avec tirets (avec ou sans espaces avant)
+    text = text.replace(/^(\s*)[-*]\s+(.+)$/gm, '$1• $2<br>');
+    
+    // 4. Convertir les listes avec puces existantes • et ✓
+    text = text.replace(/^(\s*)([•✓])\s+(.+)$/gm, '$1$2 $3<br>');
+    
+    // 5. Convertir les retours à la ligne \n en <br>
+    text = text.replace(/\\n/g, '<br>');
+    text = text.replace(/\n/g, '<br>');
+    
+    // 6. Nettoyer les <br> multiples
+    text = text.replace(/(<br>\s*){3,}/g, '<br><br>');
+    
+    return text;
+}
 
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
