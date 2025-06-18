@@ -306,26 +306,26 @@
         }
 
         .n8n-chat-widget .initial-message {
-    margin: 10px 20px; /* Réduire les marges verticales */
-    padding: 8px 12px; /* Réduire le padding */
+    margin: 10px 20px;
+    padding: 8px 12px;
     background: #f8f9fa;
-    border-radius: 8px; /* Réduire le border-radius */
-    border-left: 3px solid var(--chat--color-primary); /* Réduire la bordure */
+    border-radius: 8px;
+    border-left: 3px solid var(--chat--color-primary);
 }
 
 .n8n-chat-widget .initial-message h3 {
-    margin: 0 0 4px 0; /* Réduire l'espacement sous le titre */
+    margin: 0 0 4px 0;
     color: var(--chat--color-font);
     font-family: 'Anton SC', sans-serif;
-    font-size: 14px; /* Réduire la taille du titre */
+    font-size: 14px;
 }
 
 .n8n-chat-widget .initial-message p {
     margin: 0;
     color: var(--chat--color-font);
     opacity: 0.8;
-    font-size: 12px; /* Réduire la taille du texte */
-    line-height: 1.3; /* Réduire l'interligne */
+    font-size: 12px;
+    line-height: 1.3;
 }
 
         /* Styles pour les messages pré-rédigés */
@@ -534,7 +534,7 @@
     // Default configuration
     const defaultConfig = {
         webhook: {
-            url: 'https://n8n.srv749948.hstgr.cloud/webhook/b7ade37a-0d38-4e8a-b2f7-d65e32c32670/chat',
+            url: window.CHATBOT_WEBHOOK_URL || 'https://n8n.srv749948.hstgr.cloud/webhook/b7ade37a-0d38-4e8a-b2f7-d65e32c32670/chat',
             route: 'general'
         },
         branding: {
@@ -546,6 +546,11 @@
             position: 'right',
             backgroundColor: '#ffffff',
             fontColor: '#1B1919'
+        },
+        security: {
+            maxMessageLength: 2000,
+            requestTimeout: 15000,
+            maxSessionDuration: 3600000
         }
     };
 
@@ -562,10 +567,12 @@
         {
             webhook: { ...defaultConfig.webhook, ...window.GrowthAIChatConfig.webhook },
             branding: { ...defaultConfig.branding, ...window.GrowthAIChatConfig.branding },
-            style: { ...defaultConfig.style, ...window.GrowthAIChatConfig.style }
+            style: { ...defaultConfig.style, ...window.GrowthAIChatConfig.style },
+            security: { ...defaultConfig.security, ...window.GrowthAIChatConfig.security }
         } : defaultConfig;
 
     let currentSessionId = '';
+    let sessionTimeout = null;
 
     // Create widget container
     const widgetContainer = document.createElement('div');
@@ -577,10 +584,11 @@
     widgetContainer.style.setProperty('--n8n-chat-background-color', config.style.backgroundColor);
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
+    // Security functions
     function sanitizeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     function isValidUrl(string) {
@@ -591,27 +599,29 @@
             return false;
         }
     }
+
+    // Rate Limiter
     class RateLimiter {
-    constructor() {
-        this.requests = [];
-        this.maxRequests = 5; // 5 messages par minute
-        this.timeWindow = 60000; // 1 minute
-    }
-    
-    canMakeRequest() {
-        const now = Date.now();
-        this.requests = this.requests.filter(time => now - time < this.timeWindow);
-        
-        if (this.requests.length >= this.maxRequests) {
-            return false;
+        constructor() {
+            this.requests = [];
+            this.maxRequests = 5; // 5 messages par minute
+            this.timeWindow = 60000; // 1 minute
         }
         
-        this.requests.push(now);
-        return true;
+        canMakeRequest() {
+            const now = Date.now();
+            this.requests = this.requests.filter(time => now - time < this.timeWindow);
+            
+            if (this.requests.length >= this.maxRequests) {
+                return false;
+            }
+            
+            this.requests.push(now);
+            return true;
+        }
     }
-}      
 
-const rateLimiter = new RateLimiter();
+    const rateLimiter = new RateLimiter();
 
     function convertMarkdownToHtml(text) {
         // Échapper d'abord tout le HTML
@@ -632,6 +642,7 @@ const rateLimiter = new RateLimiter();
         text = text.replace(/\n/g, '<br>');
         return text;
     }
+
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
     
@@ -647,16 +658,16 @@ const rateLimiter = new RateLimiter();
             <div class="predefined-messages">
                 <div class="predefined-messages-title">Questions fréquentes</div>
                 ${predefinedMessages.map(msg => 
-                    `<button class="predefined-message-button">${msg}</button>`
+                    `<button class="predefined-message-button">${sanitizeHtml(msg)}</button>`
                 ).join('')}
             </div>
             <div class="chat-messages"></div>
             <div class="chat-input">
-                <textarea placeholder="Posez votre question..." rows="1"></textarea>
+                <textarea placeholder="Posez votre question..." rows="1" maxlength="${config.security.maxMessageLength}"></textarea>
                 <button type="submit">Envoyer</button>
             </div> 
              <div class="chat-footer">
-            Propulsé par <a href="https://agencen8n.com" target="_blank">Growth-AI</a>
+            Propulsé par <a href="https://agencen8n.com" target="_blank" rel="noopener noreferrer">Growth-AI</a>
             </div>
         </div>
     `;
@@ -679,13 +690,14 @@ const rateLimiter = new RateLimiter();
     widgetContainer.appendChild(toggleButton);
     widgetContainer.appendChild(chatPopup);
     document.body.appendChild(widgetContainer);
-    // Ouvrir automatiquement le chatbot au chargement
-setTimeout(() => {
-    chatContainer.style.display = 'flex';
-    void chatContainer.offsetWidth; // Force reflow
-    chatContainer.classList.add('open');
-    chatHasBeenOpened = true;
-}, 500); // Attendre 500ms pour une apparition fluide
+
+    // Auto-open chatbot
+    setTimeout(() => {
+        chatContainer.style.display = 'flex';
+        void chatContainer.offsetWidth; // Force reflow
+        chatContainer.classList.add('open');
+        chatHasBeenOpened = true;
+    }, 500);
 
     const chatInterface = chatContainer.querySelector('.chat-interface');
     const messagesContainer = chatContainer.querySelector('.chat-messages');
@@ -694,19 +706,27 @@ setTimeout(() => {
     const predefinedMessagesContainer = chatContainer.querySelector('.predefined-messages');
 
     function generateUUID() {
-    return crypto.randomUUID();
+        return crypto.randomUUID();
     }
 
     function validateMessage(message) {
-        if (message.length > 2000) {
-            throw new Error('Message trop long (max 2000 caractères)');
+        if (!message || typeof message !== 'string') {
+            throw new Error('Message invalide');
+        }
+
+        if (message.length > config.security.maxMessageLength) {
+            throw new Error(`Message trop long (max ${config.security.maxMessageLength} caractères)`);
         }
         
         const suspiciousPatterns = [
             /<script/i,
             /javascript:/i,
             /on\w+=/i,
-            /data:/i
+            /data:/i,
+            /<iframe/i,
+            /<object/i,
+            /<embed/i,
+            /vbscript:/i
         ];
         
         for (const pattern of suspiciousPatterns) {
@@ -718,364 +738,434 @@ setTimeout(() => {
         return message.trim();
     }
 
+    // Session management with timeout
+    function resetSessionTimeout() {
+        if (sessionTimeout) {
+            clearTimeout(sessionTimeout);
+        }
+        sessionTimeout = setTimeout(() => {
+            currentSessionId = '';
+            console.log('Session expirée');
+        }, config.security.maxSessionDuration);
+    }
+
     // Initialiser la session automatiquement lors de l'ouverture
     async function initializeSession() {
         if (!currentSessionId) {
             currentSessionId = generateUUID();
+            resetSessionTimeout();
             
             const data = [{
                 action: "loadPreviousSession",
                 sessionId: currentSessionId,
                 route: config.webhook.route,
                 metadata: {
-                    userId: ""
+                    userId: "",
+                    timestamp: Date.now(),
+                    userAgent: navigator.userAgent.substring(0, 100)
                 }
             }];
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), config.security.requestTimeout);
+
                 const response = await fetch(config.webhook.url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(data),
+                    signal: controller.signal
                 });
 
+                clearTimeout(timeoutId);
                 const responseData = await response.json();
                 console.log('Session initialized:', responseData);
             } catch (error) {
                 console.error('Error initializing session:', error);
             }
+        } else {
+            resetSessionTimeout();
         }
     }
 
     // Fonction pour masquer les messages pré-rédigés
     function hidePredefinedMessages() {
-    if (predefinedMessagesContainer && !predefinedMessagesContainer.classList.contains('hide')) {
-        predefinedMessagesContainer.style.display = 'none';
+        if (predefinedMessagesContainer && !predefinedMessagesContainer.classList.contains('hide')) {
+            predefinedMessagesContainer.style.display = 'none';
+        }
     }
-}
 
     // Fonction pour créer l'effet machine à écrire
     function typeWriter(element, htmlText, speed = 30) {
-    let index = 0;
-    const parentDiv = element.parentElement;
-    parentDiv.classList.add('typing');
-    element.innerHTML = '';
-    
-    // Convertir le HTML en texte visible + balises cachées
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlText;
-    const textContent = tempDiv.textContent || tempDiv.innerText || '';
-    
-    function type() {
-        if (index < textContent.length) {
-            // Récupérer le texte partiel
-            const partialText = textContent.substring(0, index + 1);
-            
-            // Reconstruire le HTML avec le texte partiel
-            let currentHtml = htmlText;
-            
-            // Remplacer le contenu textuel par le texte partiel
-            const regex = /^(.*?)([^<>]*?)$/;
-            let tempElement = document.createElement('div');
-            tempElement.innerHTML = htmlText;
-            
-            // Méthode simple : injecter caractère par caractère en préservant les balises
-            updateElementWithPartialText(element, htmlText, index + 1);
-            
-            index++;
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            setTimeout(type, speed);
-        } else {
-            parentDiv.classList.remove('typing');
-        }
-    }
-    
-    function updateElementWithPartialText(elem, fullHtml, charCount) {
+        let index = 0;
+        const parentDiv = element.parentElement;
+        parentDiv.classList.add('typing');
+        element.innerHTML = '';
+        
+        // Convertir le HTML en texte visible + balises cachées
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = fullHtml;
+        tempDiv.innerHTML = htmlText;
+        const textContent = tempDiv.textContent || tempDiv.innerText || '';
         
-        let currentCount = 0;
-        processNode(tempDiv, charCount);
-        elem.innerHTML = tempDiv.innerHTML;
+        function type() {
+            if (index < textContent.length) {
+                updateElementWithPartialText(element, htmlText, index + 1);
+                index++;
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                setTimeout(type, speed);
+            } else {
+                parentDiv.classList.remove('typing');
+            }
+        }
         
-        function processNode(node, targetCount) {
-            for (let i = 0; i < node.childNodes.length; i++) {
-                const child = node.childNodes[i];
-                
-                if (child.nodeType === Node.TEXT_NODE) {
-                    const textLength = child.textContent.length;
-                    if (currentCount + textLength <= targetCount) {
-                        currentCount += textLength;
-                    } else {
-                        const remainingChars = targetCount - currentCount;
-                        child.textContent = child.textContent.substring(0, remainingChars);
-                        currentCount = targetCount;
-                        // Supprimer les nœuds suivants
+        function updateElementWithPartialText(elem, fullHtml, charCount) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = fullHtml;
+            
+            let currentCount = 0;
+            processNode(tempDiv, charCount);
+            elem.innerHTML = tempDiv.innerHTML;
+            
+            function processNode(node, targetCount) {
+                for (let i = 0; i < node.childNodes.length; i++) {
+                    const child = node.childNodes[i];
+                    
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        const textLength = child.textContent.length;
+                        if (currentCount + textLength <= targetCount) {
+                            currentCount += textLength;
+                        } else {
+                            const remainingChars = targetCount - currentCount;
+                            child.textContent = child.textContent.substring(0, remainingChars);
+                            currentCount = targetCount;
+                            while (node.childNodes[i + 1]) {
+                                node.removeChild(node.childNodes[i + 1]);
+                            }
+                            return;
+                        }
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        const textInElement = child.textContent.length;
+                        if (currentCount + textInElement <= targetCount) {
+                            currentCount += textInElement;
+                        } else {
+                            processNode(child, targetCount);
+                            while (node.childNodes[i + 1]) {
+                                node.removeChild(node.childNodes[i + 1]);
+                            }
+                            return;
+                        }
+                    }
+                    
+                    if (currentCount >= targetCount) {
                         while (node.childNodes[i + 1]) {
                             node.removeChild(node.childNodes[i + 1]);
                         }
                         return;
                     }
-                } else if (child.nodeType === Node.ELEMENT_NODE) {
-                    const textInElement = child.textContent.length;
-                    if (currentCount + textInElement <= targetCount) {
-                        currentCount += textInElement;
-                    } else {
-                        processNode(child, targetCount);
-                        // Supprimer les nœuds suivants
-                        while (node.childNodes[i + 1]) {
-                            node.removeChild(node.childNodes[i + 1]);
-                        }
-                        return;
-                    }
-                }
-                
-                if (currentCount >= targetCount) {
-                    // Supprimer les nœuds suivants
-                    while (node.childNodes[i + 1]) {
-                        node.removeChild(node.childNodes[i + 1]);
-                    }
-                    return;
                 }
             }
         }
+        
+        type();
     }
-    
-    type();
-}
 
     async function sendMessage(message) {
-    // 1. Vérifier le rate limiting
-    if (!rateLimiter.canMakeRequest()) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'chat-message bot';
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'bot-avatar';
-        errorDiv.appendChild(avatarDiv);
-        const textContainer = document.createElement('span');
-        textContainer.textContent = 'Trop de messages. Attendez 1 minute.';
-        errorDiv.appendChild(textContainer);
-        messagesContainer.appendChild(errorDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        return;
-    }
+        // 1. Vérifier le rate limiting
+        if (!rateLimiter.canMakeRequest()) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'chat-message bot';
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'bot-avatar';
+            errorDiv.appendChild(avatarDiv);
+            const textContainer = document.createElement('span');
+            textContainer.textContent = 'Trop de messages. Attendez 1 minute.';
+            errorDiv.appendChild(textContainer);
+            messagesContainer.appendChild(errorDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return;
+        }
 
-    try {
-        // 2. Valider le message
-        const validatedMessage = validateMessage(message);
-        
-        // 3. Initialiser la session
-        await initializeSession();
+        try {
+            // 2. Valider le message
+            const validatedMessage = validateMessage(message);
+            
+            // 3. Initialiser la session
+            await initializeSession();
 
-        // 4. Préparer les données
-        const messageData = {
-            action: "sendMessage",
-            sessionId: currentSessionId,
-            route: config.webhook.route,
-            chatInput: validatedMessage,
-            metadata: {
-                userId: ""
+            // 4. Préparer les données
+            const messageData = {
+                action: "sendMessage",
+                sessionId: currentSessionId,
+                route: config.webhook.route,
+                chatInput: validatedMessage,
+                metadata: {
+                    userId: "",
+                    timestamp: Date.now(),
+                    userAgent: navigator.userAgent.substring(0, 100)
+                }
+            };
+            
+            // 5. Afficher le message utilisateur (avec le message validé)
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'chat-message user';
+            userMessageDiv.textContent = validatedMessage;
+            messagesContainer.appendChild(userMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // 6. Afficher l'indicateur de frappe
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+            messagesContainer.appendChild(typingIndicator);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // 7. Envoyer la requête avec timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), config.security.requestTimeout);
+
+            const response = await fetch(config.webhook.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(messageData),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-        };
-        
-        // 5. Afficher le message utilisateur (avec le message validé)
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'chat-message user';
-        userMessageDiv.textContent = validatedMessage;
-        messagesContainer.appendChild(userMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        // 6. Afficher l'indicateur de frappe
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-        messagesContainer.appendChild(typingIndicator);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        // 7. Envoyer la requête
-        const response = await fetch(config.webhook.url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(messageData)
-        });
-        
-        const data = await response.json();
-        
-        console.log("Response data:", data);
-        
-        // 8. Supprimer l'indicateur de frappe
-        if (messagesContainer.contains(typingIndicator)) {
-            messagesContainer.removeChild(typingIndicator);
+            
+            const data = await response.json();
+            
+            // Valider la réponse du serveur
+            if (!data || (Array.isArray(data) && !data[0]?.output) || (!Array.isArray(data) && !data.output)) {
+                throw new Error('Réponse invalide du serveur');
+            }
+            
+            console.log("Response data:", data);
+            
+            // 8. Supprimer l'indicateur de frappe
+            if (messagesContainer.contains(typingIndicator)) {
+                messagesContainer.removeChild(typingIndicator);
+            }
+            
+            // 9. Créer le message du bot
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'chat-message bot';
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'bot-avatar';
+            botMessageDiv.appendChild(avatarDiv);
+            
+            const textContainer = document.createElement('span');
+            botMessageDiv.appendChild(textContainer);
+            
+            // 10. Traiter la réponse
+            let messageText = Array.isArray(data) ? data[0].output : data.output;
+            
+            // Sanitize response
+            if (typeof messageText === 'string') {
+                messagesContainer.appendChild(botMessageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // 11. Appliquer l'effet machine à écrire
+                if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
+                    messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
+                    typeWriter(textContainer, messageText, 20);
+                } else {
+                    messageText = convertMarkdownToHtml(messageText);
+                    typeWriter(textContainer, messageText, 20);
+                }
+            } else {
+                throw new Error('Réponse invalide du serveur');
+            }
+            
+        } catch (error) {
+            console.error('Erreur dans sendMessage:', error);
+            
+            // Supprimer l'indicateur de frappe s'il existe encore
+            const existingTypingIndicator = messagesContainer.querySelector('.typing-indicator');
+            if (existingTypingIndicator) {
+                messagesContainer.removeChild(existingTypingIndicator);
+            }
+            
+            // Afficher le message d'erreur approprié
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'chat-message bot';
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'bot-avatar';
+            errorDiv.appendChild(avatarDiv);
+            
+            const textContainer = document.createElement('span');
+            errorDiv.appendChild(textContainer);
+            
+            // Message d'erreur spécifique selon le type d'erreur
+            if (error.message.includes('trop long') || error.message.includes('non autorisé') || error.message.includes('invalide')) {
+                textContainer.textContent = error.message;
+            } else if (error.name === 'AbortError') {
+                textContainer.textContent = "La requête a pris trop de temps. Veuillez réessayer.";
+            } else {
+                textContainer.textContent = "Désolé, une erreur est survenue. Veuillez réessayer.";
+            }
+            
+            messagesContainer.appendChild(errorDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-        
-        // 9. Créer le message du bot
-        const botMessageDiv = document.createElement('div');
-        botMessageDiv.className = 'chat-message bot';
-        
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'bot-avatar';
-        botMessageDiv.appendChild(avatarDiv);
-        
-        const textContainer = document.createElement('span');
-        botMessageDiv.appendChild(textContainer);
-        
-        // 10. Traiter la réponse
-        let messageText = Array.isArray(data) ? data[0].output : data.output;
-        
-        messagesContainer.appendChild(botMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // 11. Appliquer l'effet machine à écrire
-        if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
-            messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
-            typeWriter(textContainer, messageText, 20);
-        } else {
-            messageText = convertMarkdownToHtml(messageText);
-            typeWriter(textContainer, messageText, 20);
-        }
-        
-    } catch (error) {
-        console.error('Erreur dans sendMessage:', error);
-        
-        // Supprimer l'indicateur de frappe s'il existe encore
-        const existingTypingIndicator = messagesContainer.querySelector('.typing-indicator');
-        if (existingTypingIndicator) {
-            messagesContainer.removeChild(existingTypingIndicator);
-        }
-        
-        // Afficher le message d'erreur approprié
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'chat-message bot';
-        
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'bot-avatar';
-        errorDiv.appendChild(avatarDiv);
-        
-        const textContainer = document.createElement('span');
-        errorDiv.appendChild(textContainer);
-        
-        // Message d'erreur spécifique selon le type d'erreur
-        if (error.message.includes('trop long') || error.message.includes('non autorisé')) {
-            textContainer.textContent = error.message;
-        } else {
-            textContainer.textContent = "Désolé, une erreur est survenue. Veuillez réessayer.";
-        }
-        
-        messagesContainer.appendChild(errorDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
-}
+
     async function sendMessageBackground(message, existingTypingIndicator) {
-    await initializeSession();
+        try {
+            const validatedMessage = validateMessage(message);
+            await initializeSession();
 
-    const messageData = {
-        action: "sendMessage",
-        sessionId: currentSessionId,
-        route: config.webhook.route,
-        chatInput: message,
-        metadata: {
-            userId: ""
-        }
-    };
+            const messageData = {
+                action: "sendMessage",
+                sessionId: currentSessionId,
+                route: config.webhook.route,
+                chatInput: validatedMessage,
+                metadata: {
+                    userId: "",
+                    timestamp: Date.now(),
+                    userAgent: navigator.userAgent.substring(0, 100)
+                }
+            };
 
-    try {
-        const response = await fetch(config.webhook.url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(messageData)
-        });
-        
-        const data = await response.json();
-        
-        console.log("Response data:", data);
-        
-        // Supprimer le typing indicator existant
-        if (messagesContainer.contains(existingTypingIndicator)) {
-            messagesContainer.removeChild(existingTypingIndicator);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), config.security.requestTimeout);
+
+            const response = await fetch(config.webhook.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(messageData),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data || (Array.isArray(data) && !data[0]?.output) || (!Array.isArray(data) && !data.output)) {
+                throw new Error('Réponse invalide du serveur');
+            }
+            
+            console.log("Response data:", data);
+            
+            // Supprimer le typing indicator existant
+            if (messagesContainer.contains(existingTypingIndicator)) {
+                messagesContainer.removeChild(existingTypingIndicator);
+            }
+            
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'chat-message bot';
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'bot-avatar';
+            botMessageDiv.appendChild(avatarDiv);
+            
+            const textContainer = document.createElement('span');
+            botMessageDiv.appendChild(textContainer);
+            
+            let messageText = Array.isArray(data) ? data[0].output : data.output;
+            
+            if (typeof messageText === 'string') {
+                messagesContainer.appendChild(botMessageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
+                    messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
+                    typeWriter(textContainer, messageText, 20);
+                } else {
+                    messageText = convertMarkdownToHtml(messageText);
+                    typeWriter(textContainer, messageText, 20);
+                }
+            } else {
+                throw new Error('Réponse invalide du serveur');
+            }
+            
+        } catch (error) {
+            console.error('Erreur réseau:', error);
+            
+            if (messagesContainer.contains(existingTypingIndicator)) {
+                messagesContainer.removeChild(existingTypingIndicator);
+            }
+            
+            const errorMessageDiv = document.createElement('div');
+            errorMessageDiv.className = 'chat-message bot';
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'bot-avatar';
+            errorMessageDiv.appendChild(avatarDiv);
+            
+            const textContainer = document.createElement('span');
+            errorMessageDiv.appendChild(textContainer);
+            
+            if (error.message.includes('trop long') || error.message.includes('non autorisé') || error.message.includes('invalide')) {
+                textContainer.textContent = error.message;
+            } else if (error.name === 'AbortError') {
+                textContainer.textContent = "La requête a pris trop de temps. Veuillez réessayer.";
+            } else {
+                textContainer.textContent = "Désolé, une erreur est survenue. Veuillez réessayer.";
+            }
+            
+            messagesContainer.appendChild(errorMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-        
-        const botMessageDiv = document.createElement('div');
-        botMessageDiv.className = 'chat-message bot';
-        
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'bot-avatar';
-        botMessageDiv.appendChild(avatarDiv);
-        
-        const textContainer = document.createElement('span');
-        botMessageDiv.appendChild(textContainer);
-        
-        let messageText = Array.isArray(data) ? data[0].output : data.output;
-        
-        messagesContainer.appendChild(botMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
-            messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
-            typeWriter(textContainer, messageText, 20);
-        } else {
-            messageText = convertMarkdownToHtml(messageText);
-            typeWriter(textContainer, messageText, 20);
-        }
-        
-    } catch (error) {
-        console.error('Erreur réseau:', error);
-        
-        if (messagesContainer.contains(existingTypingIndicator)) {
-            messagesContainer.removeChild(existingTypingIndicator);
-        }
-        
-        // Afficher message d'erreur...
-        const errorMessageDiv = document.createElement('div');
-        errorMessageDiv.className = 'chat-message bot';
-        
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'bot-avatar';
-        errorMessageDiv.appendChild(avatarDiv);
-        
-        const textContainer = document.createElement('span');
-        errorMessageDiv.appendChild(textContainer);
-        
-        messagesContainer.appendChild(errorMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
     }
-}
 
-
-// Gestionnaire pour les messages pré-rédigés
-const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
-predefinedMessageButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const message = button.textContent;
-        
-        // 1. Masquer immédiatement les messages pré-remplis
-        hidePredefinedMessages();
-        
-        // 2. Afficher immédiatement le message utilisateur
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'chat-message user';
-        userMessageDiv.textContent = message;
-        messagesContainer.appendChild(userMessageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // 3. Afficher immédiatement l'indicateur "typing"
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-        messagesContainer.appendChild(typingIndicator);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // 4. Envoyer la requête en arrière-plan
-        sendMessageBackground(message, typingIndicator);
+    // Gestionnaire pour les messages pré-rédigés
+    const predefinedMessageButtons = chatContainer.querySelectorAll('.predefined-message-button');
+    predefinedMessageButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const message = button.textContent;
+            
+            // Vérifier le rate limiting pour les messages pré-rédigés aussi
+            if (!rateLimiter.canMakeRequest()) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'chat-message bot';
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'bot-avatar';
+                errorDiv.appendChild(avatarDiv);
+                const textContainer = document.createElement('span');
+                textContainer.textContent = 'Trop de messages. Attendez 1 minute.';
+                errorDiv.appendChild(textContainer);
+                messagesContainer.appendChild(errorDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                return;
+            }
+            
+            // 1. Masquer immédiatement les messages pré-remplis
+            hidePredefinedMessages();
+            
+            // 2. Afficher immédiatement le message utilisateur
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'chat-message user';
+            userMessageDiv.textContent = message;
+            messagesContainer.appendChild(userMessageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // 3. Afficher immédiatement l'indicateur "typing"
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+            messagesContainer.appendChild(typingIndicator);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // 4. Envoyer la requête en arrière-plan
+            sendMessageBackground(message, typingIndicator);
+        });
     });
-});
 
     sendButton.addEventListener('click', () => {
         const message = textarea.value.trim();
@@ -1097,8 +1187,41 @@ predefinedMessageButtons.forEach(button => {
     });
     
     toggleButton.addEventListener('click', () => {
-    if (chatContainer.classList.contains('open')) {
-        // Fermeture
+        if (chatContainer.classList.contains('open')) {
+            // Fermeture
+            chatContainer.classList.add('closing');
+            toggleButton.classList.add('hidden');
+            
+            setTimeout(() => {
+                chatContainer.classList.remove('open', 'closing');
+                chatContainer.style.display = 'none';
+                toggleButton.classList.remove('hidden');
+                
+                // Afficher le popup après fermeture
+                handlePopupDisplay();
+            }, 300);
+        } else {
+            // Ouverture
+            chatContainer.style.display = 'flex';
+            toggleButton.classList.add('hidden');
+            
+            // Force reflow pour que l'animation fonctionne
+            void chatContainer.offsetWidth;
+            
+            chatContainer.classList.add('open');
+            chatHasBeenOpened = true;
+            
+            // Masquer le popup lors de l'ouverture
+            chatPopup.classList.remove('show');
+            
+            setTimeout(() => {
+                toggleButton.classList.remove('hidden');
+            }, 100);
+        }
+    });
+
+    const closeButton = chatContainer.querySelector('.close-button');
+    closeButton.addEventListener('click', () => {
         chatContainer.classList.add('closing');
         toggleButton.classList.add('hidden');
         
@@ -1110,63 +1233,30 @@ predefinedMessageButtons.forEach(button => {
             // Afficher le popup après fermeture
             handlePopupDisplay();
         }, 300);
-    } else {
-        // Ouverture
-        chatContainer.style.display = 'flex';
-        toggleButton.classList.add('hidden');
-        
-        // Force reflow pour que l'animation fonctionne
-        void chatContainer.offsetWidth;
-        
-        chatContainer.classList.add('open');
-        chatHasBeenOpened = true;
-        
-        // Masquer le popup lors de l'ouverture
-        chatPopup.classList.remove('show');
-        
-        setTimeout(() => {
-            toggleButton.classList.remove('hidden');
-        }, 100);
-    }
-});
-
-    const closeButton = chatContainer.querySelector('.close-button');
-closeButton.addEventListener('click', () => {
-    chatContainer.classList.add('closing');
-    toggleButton.classList.add('hidden');
-    
-    setTimeout(() => {
-        chatContainer.classList.remove('open', 'closing');
-        chatContainer.style.display = 'none';
-        toggleButton.classList.remove('hidden');
-        
-        // Afficher le popup après fermeture
-        handlePopupDisplay();
-    }, 300);
-});
+    });
 
     // Variable pour suivre si le chat a déjà été ouvert
-let chatHasBeenOpened = false;
+    let chatHasBeenOpened = false;
 
-// Fonction pour gérer l'affichage du popup
-function handlePopupDisplay() {
-    if (!chatContainer.classList.contains('open')) {
-        // Afficher le popup avec un petit délai après fermeture
-        setTimeout(() => {
-            if (!chatContainer.classList.contains('open')) {
-                chatPopup.classList.add('show');
-            }
-        }, 1000); // 1 seconde après fermeture
-    } else {
-        // Masquer le popup si le chat est ouvert
-        chatPopup.classList.remove('show');
+    // Fonction pour gérer l'affichage du popup
+    function handlePopupDisplay() {
+        if (!chatContainer.classList.contains('open')) {
+            // Afficher le popup avec un petit délai après fermeture
+            setTimeout(() => {
+                if (!chatContainer.classList.contains('open')) {
+                    chatPopup.classList.add('show');
+                }
+            }, 1000); // 1 seconde après fermeture
+        } else {
+            // Masquer le popup si le chat est ouvert
+            chatPopup.classList.remove('show');
+        }
     }
-}
 
-// Afficher le popup initial après ouverture automatique (si fermé)
-setTimeout(() => {
-    handlePopupDisplay();
-}, 2000); // Après que l'auto-ouverture soit terminée
+    // Afficher le popup initial après ouverture automatique (si fermé)
+    setTimeout(() => {
+        handlePopupDisplay();
+    }, 2000); // Après que l'auto-ouverture soit terminée
 
     // Masquer le popup si on clique dessus ou sur le bouton
     chatPopup.addEventListener('click', () => {
@@ -1174,9 +1264,17 @@ setTimeout(() => {
     });
 
     // Modifier le gestionnaire du bouton toggle pour gérer le popup
-    const originalToggleHandler = toggleButton.onclick;
     toggleButton.addEventListener('click', () => {
         chatHasBeenOpened = true;
         chatPopup.classList.remove('show');
     });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        currentSessionId = '';
+        if (sessionTimeout) {
+            clearTimeout(sessionTimeout);
+        }
+    });
+
 })();
