@@ -549,7 +549,7 @@
         },
         security: {
             maxMessageLength: 2000,
-            requestTimeout: 300000, // 60 secondes pour les réponses lentes
+            requestTimeout: 60000, // 60 secondes pour les réponses lentes
             maxSessionDuration: 3600000
         }
     };
@@ -628,16 +628,24 @@
         text = sanitizeHtml(text);
         
         text = text.replace(/\\n/g, '\n');
-        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         
-        // Validation des URLs pour les liens
+        // Traiter les liens AVANT le formatage bold pour éviter les conflits
         text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
             if (isValidUrl(url)) {
-                const safeLinkText = sanitizeHtml(linkText);
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${safeLinkText}</a>`;
+                // Nettoyer le texte du lien des balises HTML échappées
+                let cleanLinkText = linkText
+                    .replace(/&lt;strong&gt;/g, '<strong>')
+                    .replace(/&lt;\/strong&gt;/g, '</strong>')
+                    .replace(/&lt;em&gt;/g, '<em>')
+                    .replace(/&lt;\/em&gt;/g, '</em>');
+                
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${cleanLinkText}</a>`;
             }
-            return linkText; // Retourner juste le texte si URL invalide
+            return linkText;
         });
+        
+        // Traiter le formatage bold APRÈS les liens
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         
         text = text.replace(/\n/g, '<br>');
         return text;
