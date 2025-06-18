@@ -661,10 +661,6 @@
             <div class="brand-header">
                 <button class="close-button">×</button>
             </div>
-            <div class="initial-message">
-                <h3>${config.branding.welcomeText}</h3>
-                <p>Je suis là pour vous aider avec vos questions !</p>
-            </div>
             <div class="predefined-messages">
                 <div class="predefined-messages-title">Questions fréquentes</div>
                 ${predefinedMessages.map(msg => 
@@ -707,6 +703,11 @@
         void chatContainer.offsetWidth; // Force reflow
         chatContainer.classList.add('open');
         chatHasBeenOpened = true;
+        
+        // Ajouter le message de bienvenue automatique après l'ouverture
+        setTimeout(() => {
+            addWelcomeMessage();
+        }, 800); // Délai pour que l'animation d'ouverture soit terminée
     }, 500);
 
     const chatInterface = chatContainer.querySelector('.chat-interface');
@@ -717,6 +718,26 @@
 
     function generateUUID() {
         return crypto.randomUUID();
+    }
+
+    // Fonction pour ajouter le message de bienvenue automatique
+    function addWelcomeMessage() {
+        const welcomeMessageDiv = document.createElement('div');
+        welcomeMessageDiv.className = 'chat-message bot';
+        
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        welcomeMessageDiv.appendChild(avatarDiv);
+        
+        const textContainer = document.createElement('span');
+        welcomeMessageDiv.appendChild(textContainer);
+        
+        messagesContainer.appendChild(welcomeMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Message de bienvenue avec effet machine à écrire
+        const welcomeText = `<strong>${config.branding.welcomeText}</strong><br>Je suis là pour vous aider avec vos questions !`;
+        typeWriter(textContainer, welcomeText, 30);
     }
 
     function validateMessage(message) {
