@@ -63,6 +63,8 @@
             border-bottom: 1px solid rgba(255, 128, 0, 0.1);
             position: relative;
             background: linear-gradient(135deg, var(--chat--color-primary) 0%, var(--chat--color-secondary) 100%);
+            cursor: pointer; /* Ajouter le curseur pointer pour indiquer que c'est cliquable */
+            user-select: none; /* Empêcher la sélection de texte */
         }
 
         .n8n-chat-widget .close-button {
@@ -1252,7 +1254,10 @@
     });
 
     const closeButton = chatContainer.querySelector('.close-button');
-    closeButton.addEventListener('click', () => {
+    const brandHeader = chatContainer.querySelector('.brand-header');
+    
+    // Fonction pour fermer le chatbot
+    function closeChatbot() {
         chatContainer.classList.add('closing');
         toggleButton.classList.add('hidden');
         
@@ -1264,6 +1269,17 @@
             // Afficher le popup après fermeture
             handlePopupDisplay();
         }, 300);
+    }
+    
+    // Event listener pour le bouton de fermeture
+    closeButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Empêcher la propagation vers l'en-tête
+        closeChatbot();
+    });
+    
+    // Event listener pour l'en-tête complet
+    brandHeader.addEventListener('click', () => {
+        closeChatbot();
     });
 
     // Variable pour suivre si le chat a déjà été ouvert
