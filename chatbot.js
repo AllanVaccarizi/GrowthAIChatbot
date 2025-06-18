@@ -569,7 +569,6 @@
     const chatInterfaceHTML = `
         <div class="chat-interface">
             <div class="brand-header">
-                <span>${config.branding.name}</span>
                 <button class="close-button">×</button>
             </div>
             <div class="initial-message">
