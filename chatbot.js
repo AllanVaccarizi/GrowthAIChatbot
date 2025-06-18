@@ -577,15 +577,61 @@
     widgetContainer.style.setProperty('--n8n-chat-background-color', config.style.backgroundColor);
     widgetContainer.style.setProperty('--n8n-chat-font-color', config.style.fontColor);
   
-    function convertMarkdownToHtml(text) {
-    // Juste les conversions de base
-    text = text.replace(/\\n/g, '\n');
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    text = text.replace(/\n/g, '<br>');
+    function sanitizeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+    }
+
+    function isValidUrl(string) {
+        try {
+            const url = new URL(string);
+            return ['http:', 'https:'].includes(url.protocol);
+        } catch (_) {
+            return false;
+        }
+    }
+    class RateLimiter {
+    constructor() {
+        this.requests = [];
+        this.maxRequests = 5; // 5 messages par minute
+        this.timeWindow = 60000; // 1 minute
+    }
     
-    return text;
-}
+    canMakeRequest() {
+        const now = Date.now();
+        this.requests = this.requests.filter(time => now - time < this.timeWindow);
+        
+        if (this.requests.length >= this.maxRequests) {
+            return false;
+        }
+        
+        this.requests.push(now);
+        return true;
+    }
+}      
+
+const rateLimiter = new RateLimiter();
+
+    function convertMarkdownToHtml(text) {
+        // Échapper d'abord tout le HTML
+        text = sanitizeHtml(text);
+        
+        text = text.replace(/\\n/g, '\n');
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Validation des URLs pour les liens
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+            if (isValidUrl(url)) {
+                const safeLinkText = sanitizeHtml(linkText);
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${safeLinkText}</a>`;
+            }
+            return linkText; // Retourner juste le texte si URL invalide
+        });
+        
+        text = text.replace(/\n/g, '<br>');
+        return text;
+    }
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
     
@@ -648,7 +694,28 @@ setTimeout(() => {
     const predefinedMessagesContainer = chatContainer.querySelector('.predefined-messages');
 
     function generateUUID() {
-        return crypto.randomUUID();
+    return crypto.randomUUID();
+    }
+
+    function validateMessage(message) {
+        if (message.length > 2000) {
+            throw new Error('Message trop long (max 2000 caractères)');
+        }
+        
+        const suspiciousPatterns = [
+            /<script/i,
+            /javascript:/i,
+            /on\w+=/i,
+            /data:/i
+        ];
+        
+        for (const pattern of suspiciousPatterns) {
+            if (pattern.test(message)) {
+                throw new Error('Contenu non autorisé détecté');
+            }
+        }
+        
+        return message.trim();
     }
 
     // Initialiser la session automatiquement lors de l'ouverture
@@ -780,31 +847,54 @@ setTimeout(() => {
 }
 
     async function sendMessage(message) {
-    await initializeSession();
-
-    const messageData = {
-        action: "sendMessage",
-        sessionId: currentSessionId,
-        route: config.webhook.route,
-        chatInput: message,
-        metadata: {
-            userId: ""
-        }
-    };
-    
-    const userMessageDiv = document.createElement('div');
-    userMessageDiv.className = 'chat-message user';
-    userMessageDiv.textContent = message;
-    messagesContainer.appendChild(userMessageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-    const typingIndicator = document.createElement('div');
-    typingIndicator.className = 'typing-indicator';
-    typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-    messagesContainer.appendChild(typingIndicator);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // 1. Vérifier le rate limiting
+    if (!rateLimiter.canMakeRequest()) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'chat-message bot';
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        errorDiv.appendChild(avatarDiv);
+        const textContainer = document.createElement('span');
+        textContainer.textContent = 'Trop de messages. Attendez 1 minute.';
+        errorDiv.appendChild(textContainer);
+        messagesContainer.appendChild(errorDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return;
+    }
 
     try {
+        // 2. Valider le message
+        const validatedMessage = validateMessage(message);
+        
+        // 3. Initialiser la session
+        await initializeSession();
+
+        // 4. Préparer les données
+        const messageData = {
+            action: "sendMessage",
+            sessionId: currentSessionId,
+            route: config.webhook.route,
+            chatInput: validatedMessage,
+            metadata: {
+                userId: ""
+            }
+        };
+        
+        // 5. Afficher le message utilisateur (avec le message validé)
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'chat-message user';
+        userMessageDiv.textContent = validatedMessage;
+        messagesContainer.appendChild(userMessageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // 6. Afficher l'indicateur de frappe
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+        messagesContainer.appendChild(typingIndicator);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // 7. Envoyer la requête
         const response = await fetch(config.webhook.url, {
             method: 'POST',
             headers: {
@@ -815,10 +905,14 @@ setTimeout(() => {
         
         const data = await response.json();
         
-        console.log("Response data:", data); // Pour debug
+        console.log("Response data:", data);
         
-        // TRAITER LA RÉPONSE MÊME SI ERREUR 500
-        messagesContainer.removeChild(typingIndicator);
+        // 8. Supprimer l'indicateur de frappe
+        if (messagesContainer.contains(typingIndicator)) {
+            messagesContainer.removeChild(typingIndicator);
+        }
+        
+        // 9. Créer le message du bot
         const botMessageDiv = document.createElement('div');
         botMessageDiv.className = 'chat-message bot';
         
@@ -826,16 +920,16 @@ setTimeout(() => {
         avatarDiv.className = 'bot-avatar';
         botMessageDiv.appendChild(avatarDiv);
         
-        // Créer un conteneur pour le texte
         const textContainer = document.createElement('span');
         botMessageDiv.appendChild(textContainer);
         
+        // 10. Traiter la réponse
         let messageText = Array.isArray(data) ? data[0].output : data.output;
         
-        // Ajouter le message au DOM avant l'animation
         messagesContainer.appendChild(botMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         
+        // 11. Appliquer l'effet machine à écrire
         if (messageText.trim().startsWith('<html>') && messageText.trim().endsWith('</html>')) {
             messageText = messageText.replace(/<html>|<\/html>/g, '').trim();
             typeWriter(textContainer, messageText, 20);
@@ -845,31 +939,37 @@ setTimeout(() => {
         }
         
     } catch (error) {
-        console.error('Vraie erreur réseau:', error);
+        console.error('Erreur dans sendMessage:', error);
         
-        if (messagesContainer.contains(typingIndicator)) {
-            messagesContainer.removeChild(typingIndicator);
+        // Supprimer l'indicateur de frappe s'il existe encore
+        const existingTypingIndicator = messagesContainer.querySelector('.typing-indicator');
+        if (existingTypingIndicator) {
+            messagesContainer.removeChild(existingTypingIndicator);
         }
         
-        const errorMessageDiv = document.createElement('div');
-        errorMessageDiv.className = 'chat-message bot';
+        // Afficher le message d'erreur approprié
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'chat-message bot';
         
         const avatarDiv = document.createElement('div');
         avatarDiv.className = 'bot-avatar';
-        errorMessageDiv.appendChild(avatarDiv);
+        errorDiv.appendChild(avatarDiv);
         
-        // Créer un conteneur pour le texte
         const textContainer = document.createElement('span');
-        errorMessageDiv.appendChild(textContainer);
+        errorDiv.appendChild(textContainer);
         
-        messagesContainer.appendChild(errorMessageDiv);
+        // Message d'erreur spécifique selon le type d'erreur
+        if (error.message.includes('trop long') || error.message.includes('non autorisé')) {
+            textContainer.textContent = error.message;
+        } else {
+            textContainer.textContent = "Désolé, une erreur est survenue. Veuillez réessayer.";
+        }
+        
+        messagesContainer.appendChild(errorDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // Animer le message d'erreur
-        typeWriter(textContainer, "Désolé, une erreur est survenue. Veuillez réessayer.", 20);
     }
 }
-async function sendMessageBackground(message, existingTypingIndicator) {
+    async function sendMessageBackground(message, existingTypingIndicator) {
     await initializeSession();
 
     const messageData = {
