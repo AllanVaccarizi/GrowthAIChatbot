@@ -549,7 +549,7 @@
         },
         security: {
             maxMessageLength: 2000,
-            requestTimeout: 15000,
+            requestTimeout: 300000, // 60 secondes pour les réponses lentes
             maxSessionDuration: 3600000
         }
     };
