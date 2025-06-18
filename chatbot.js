@@ -306,26 +306,28 @@
         }
 
         .n8n-chat-widget .initial-message {
-    margin: 10px 20px;
-    padding: 8px 12px;
+    margin: 0; /* Supprimer les marges pour prendre toute la largeur */
+    padding: 16px 20px; /* Augmenter le padding */
     background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 3px solid var(--chat--color-primary);
+    border-radius: 0; /* Supprimer le border-radius pour aller jusqu'aux bords */
+    border-bottom: 1px solid rgba(255, 128, 0, 0.1); /* Bordure en bas au lieu de gauche */
 }
 
 .n8n-chat-widget .initial-message h3 {
-    margin: 0 0 4px 0;
+    margin: 0 0 6px 0; /* Augmenter un peu l'espacement sous le titre */
     color: var(--chat--color-font);
     font-family: 'Anton SC', sans-serif;
-    font-size: 14px;
+    font-size: 16px; /* Augmenter la taille du titre */
+    text-align: center; /* Centrer le titre */
 }
 
 .n8n-chat-widget .initial-message p {
     margin: 0;
     color: var(--chat--color-font);
     opacity: 0.8;
-    font-size: 12px;
-    line-height: 1.3;
+    font-size: 13px; /* Augmenter légèrement la taille du texte */
+    line-height: 1.4; /* Améliorer l'interligne */
+    text-align: center; /* Centrer le texte */
 }
 
         /* Styles pour les messages pré-rédigés */
