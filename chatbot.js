@@ -661,13 +661,13 @@
             <div class="brand-header">
                 <button class="close-button">×</button>
             </div>
+            <div class="chat-messages"></div>
             <div class="predefined-messages">
                 <div class="predefined-messages-title">Questions fréquentes</div>
                 ${predefinedMessages.map(msg => 
                     `<button class="predefined-message-button">${sanitizeHtml(msg)}</button>`
                 ).join('')}
             </div>
-            <div class="chat-messages"></div>
             <div class="chat-input">
                 <textarea placeholder="Posez votre question..." rows="1" maxlength="${config.security.maxMessageLength}"></textarea>
                 <button type="submit">Envoyer</button>
