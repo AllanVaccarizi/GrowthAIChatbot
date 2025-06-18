@@ -658,13 +658,10 @@ setTimeout(() => {
 
     // Fonction pour masquer les messages pré-rédigés
     function hidePredefinedMessages() {
-        if (predefinedMessagesContainer && !predefinedMessagesContainer.classList.contains('hide')) {
-            predefinedMessagesContainer.classList.add('hide');
-            setTimeout(() => {
-                predefinedMessagesContainer.style.display = 'none';
-            }, 300);
-        }
+    if (predefinedMessagesContainer && !predefinedMessagesContainer.classList.contains('hide')) {
+        predefinedMessagesContainer.style.display = 'none';
     }
+}
 
     // Fonction pour créer l'effet machine à écrire
     function typeWriter(element, htmlText, speed = 30) {
