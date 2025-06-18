@@ -500,8 +500,31 @@
         .n8n-chat-widget .chat-message.bot em {
             color: var(--chat--color-font);
             font-style: italic;
-}
-    `;
+        }
+
+        .n8n-chat-widget .chat-footer {
+            padding: 8px 16px;
+            background: var(--chat--color-background);
+            border-top: 1px solid rgba(255, 128, 0, 0.1);
+            text-align: center;
+            font-size: 11px;
+            color: var(--chat--color-font);
+            opacity: 0.7;
+            font-family: 'Archivo', sans-serif;
+        }
+
+        .n8n-chat-widget .chat-footer a {
+            color: var(--chat--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .n8n-chat-widget .chat-footer a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }    
+`;
 
     // Inject styles
     const styleSheet = document.createElement('style');
@@ -586,6 +609,9 @@
                 <textarea placeholder="Posez votre question..." rows="1"></textarea>
                 <button type="submit">Envoyer</button>
             </div> 
+             <div class="chat-footer">
+            Propulsé par <a href="https://agencen8n.com" target="_blank">Growth-AI</a>
+            </div>
         </div>
     `;
     
