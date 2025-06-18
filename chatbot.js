@@ -515,7 +515,6 @@
             route: 'general'
         },
         branding: {
-            name: 'Growth.ai',
             welcomeText: 'Besoin d\'aide ?',
         },
         style: {
@@ -575,7 +574,7 @@
             </div>
             <div class="initial-message">
                 <h3>${config.branding.welcomeText}</h3>
-                <p>Je suis là pour vous aider avec vos questions. N'hésitez pas à me poser votre question !</p>
+                <p>Je suis là pour vous aider avec vos questions !</p>
             </div>
             <div class="predefined-messages">
                 <div class="predefined-messages-title">Questions fréquentes</div>
