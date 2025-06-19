@@ -267,6 +267,32 @@
             animation: pulse 1s infinite 0.4s;
         }
 
+        /* Nouveau style pour le conteneur typing avec texte */
+        .n8n-chat-widget .typing-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin: 10px 0;
+            margin-top: 35px;
+            margin-left: 18px;
+            gap: 4px;
+        }
+
+        .n8n-chat-widget .typing-container .typing-indicator {
+            margin: 0;
+            margin-left: 0;
+            margin-top: 0;
+        }
+
+        .n8n-chat-widget .typing-container .response-time-info {
+            font-size: 11px;
+            color: var(--chat--color-font);
+            opacity: 0.6;
+            font-family: 'Archivo', sans-serif;
+            font-style: italic;
+            padding-left: 12px;
+        }
+
         @keyframes pulse {
             0% {
                 opacity: 0.4;
@@ -655,6 +681,25 @@
         return text;
     }
 
+    // Fonction pour créer l'indicateur de typing avec le message de temps de réponse
+    function createTypingIndicatorWithMessage() {
+        const typingContainer = document.createElement('div');
+        typingContainer.className = 'typing-container';
+        
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+        
+        const responseTimeInfo = document.createElement('div');
+        responseTimeInfo.className = 'response-time-info';
+        responseTimeInfo.textContent = 'Temps moyen de réponse ~30 secondes';
+        
+        typingContainer.appendChild(typingIndicator);
+        typingContainer.appendChild(responseTimeInfo);
+        
+        return typingContainer;
+    }
+
     const chatContainer = document.createElement('div');
     chatContainer.className = `chat-container${config.style.position === 'left' ? ' position-left' : ''}`;
     
@@ -947,11 +992,9 @@
             messagesContainer.appendChild(userMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-            // 6. Afficher l'indicateur de frappe
-            const typingIndicator = document.createElement('div');
-            typingIndicator.className = 'typing-indicator';
-            typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-            messagesContainer.appendChild(typingIndicator);
+            // 6. Afficher l'indicateur de frappe avec le message de temps de réponse
+            const typingContainer = createTypingIndicatorWithMessage();
+            messagesContainer.appendChild(typingContainer);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
             // 7. Envoyer la requête avec timeout
@@ -982,9 +1025,9 @@
             
             console.log("Response data:", data);
             
-            // 8. Supprimer l'indicateur de frappe
-            if (messagesContainer.contains(typingIndicator)) {
-                messagesContainer.removeChild(typingIndicator);
+            // 8. Supprimer l'indicateur de frappe avec le message
+            if (messagesContainer.contains(typingContainer)) {
+                messagesContainer.removeChild(typingContainer);
             }
             
             // 9. Créer le message du bot
@@ -1022,9 +1065,9 @@
             console.error('Erreur dans sendMessage:', error);
             
             // Supprimer l'indicateur de frappe s'il existe encore
-            const existingTypingIndicator = messagesContainer.querySelector('.typing-indicator');
-            if (existingTypingIndicator) {
-                messagesContainer.removeChild(existingTypingIndicator);
+            const existingTypingContainer = messagesContainer.querySelector('.typing-container');
+            if (existingTypingContainer) {
+                messagesContainer.removeChild(existingTypingContainer);
             }
             
             // Afficher le message d'erreur approprié
@@ -1052,7 +1095,7 @@
         }
     }
 
-    async function sendMessageBackground(message, existingTypingIndicator) {
+    async function sendMessageBackground(message, existingTypingContainer) {
         try {
             const validatedMessage = validateMessage(message);
             await initializeSession();
@@ -1095,9 +1138,9 @@
             
             console.log("Response data:", data);
             
-            // Supprimer le typing indicator existant
-            if (messagesContainer.contains(existingTypingIndicator)) {
-                messagesContainer.removeChild(existingTypingIndicator);
+            // Supprimer le typing container existant
+            if (messagesContainer.contains(existingTypingContainer)) {
+                messagesContainer.removeChild(existingTypingContainer);
             }
             
             const botMessageDiv = document.createElement('div');
@@ -1130,8 +1173,8 @@
         } catch (error) {
             console.error('Erreur réseau:', error);
             
-            if (messagesContainer.contains(existingTypingIndicator)) {
-                messagesContainer.removeChild(existingTypingIndicator);
+            if (messagesContainer.contains(existingTypingContainer)) {
+                messagesContainer.removeChild(existingTypingContainer);
             }
             
             const errorMessageDiv = document.createElement('div');
@@ -1188,15 +1231,13 @@
             messagesContainer.appendChild(userMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            // 3. Afficher immédiatement l'indicateur "typing"
-            const typingIndicator = document.createElement('div');
-            typingIndicator.className = 'typing-indicator';
-            typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-            messagesContainer.appendChild(typingIndicator);
+            // 3. Afficher immédiatement l'indicateur "typing" avec le message de temps de réponse
+            const typingContainer = createTypingIndicatorWithMessage();
+            messagesContainer.appendChild(typingContainer);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
             // 4. Envoyer la requête en arrière-plan
-            sendMessageBackground(message, typingIndicator);
+            sendMessageBackground(message, typingContainer);
         });
     });
 
@@ -1325,4 +1366,3 @@
     });
 
 })();
-//test
