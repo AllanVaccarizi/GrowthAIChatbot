@@ -6,8 +6,8 @@
     
     // --- COULEURS ET STYLE ---
     const CHATBOT_COLORS = {
-        primaryColor: '#FF8000',      // Couleur principale (orange)
-        secondaryColor: '#E7BF26',    // Couleur secondaire (jaune)
+        primaryColor: '#E7BF26',      // Couleur principale (orange)
+        secondaryColor: '#FF8000',    // Couleur secondaire (jaune)
         backgroundColor: '#ffffff',   // Fond du chatbot
         fontColor: '#1B1919',        // Couleur du texte
         position: 'right'            // Position: 'left' ou 'right'
