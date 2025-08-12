@@ -4,6 +4,9 @@
     // 🎨 CONFIGURATION DU CHATBOT
     // ============================================
     
+    // --- OUVERTURE AUTOMATIQUE ---
+    const AUTO_OPEN_ON_LOAD = false; // true = s'ouvre automatiquement, false = reste fermé
+    
     // --- COULEURS ET STYLE ---
     const CHATBOT_COLORS = {
         primaryColor: '#E7BF26',      // Couleur principale (orange)
@@ -1022,8 +1025,9 @@
         }
     });
 
-    // Auto-open chatbot seulement si c'est la première visite ET qu'il n'a jamais été fermé
-    if (!chatHasBeenOpened && !chatHasBeenClosed) {
+    // MODIFICATION PRINCIPALE : Utiliser la variable AUTO_OPEN_ON_LOAD
+    // Auto-open chatbot seulement si AUTO_OPEN_ON_LOAD est à true ET que c'est la première visite ET qu'il n'a jamais été fermé
+    if (AUTO_OPEN_ON_LOAD && !chatHasBeenOpened && !chatHasBeenClosed) {
         setTimeout(() => {
             chatContainer.style.display = 'flex';
             void chatContainer.offsetWidth;
@@ -1237,6 +1241,9 @@
         type();
     }
 
+    // Reste du code (fonctions sendMessage, event listeners, etc.)
+    // [Le reste du code continue avec toutes les autres fonctions...]
+    
     async function sendMessage(message) {
         if (!rateLimiter.canMakeRequest()) {
             const errorDiv = document.createElement('div');
